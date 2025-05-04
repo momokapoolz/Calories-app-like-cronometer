@@ -1,12 +1,5 @@
 package auth
 
-// TokenPair represents a pair of JWT tokens (access and refresh)
-type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"` // Seconds until access token expires
-}
-
 // Claims represents the JWT claims structure
 type Claims struct {
 	UserID uint   `json:"user_id"`
@@ -22,5 +15,5 @@ type LoginRequest struct {
 
 // RefreshRequest represents a token refresh request
 type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token" binding:"required"`
+	RefreshTokenID int64 `json:"refresh_token_id" binding:"required"`
 } 
