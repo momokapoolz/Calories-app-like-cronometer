@@ -20,6 +20,13 @@ func NewJWTService() *JWTService {
 	}
 }
 
+// TokenPair represents a pair of JWT tokens (access and refresh)
+type TokenPair struct {
+	AccessTokenID  int64  `json:"access_token_id"`
+	RefreshTokenID int64  `json:"refresh_token_id"`
+	ExpiresIn      int64  `json:"expires_in"` // Seconds until access token expires
+}
+
 // GenerateTokenPair creates a new access and refresh token pair
 func (s *JWTService) GenerateTokenPair(userID uint, email, role string) (TokenPair, error) {
 	// Create access token
@@ -54,18 +61,35 @@ func (s *JWTService) GenerateTokenPair(userID uint, email, role string) (TokenPa
 		return TokenPair{}, err
 	}
 
+	// Store tokens in Redis and get their IDs
+	accessTokenID, err := StoreToken(accessTokenString, s.config.TokenExpiry)
+	if err != nil {
+		return TokenPair{}, fmt.Errorf("failed to store access token: %v", err)
+	}
+
+	refreshTokenID, err := StoreToken(refreshTokenString, s.config.RefreshExpiry)
+	if err != nil {
+		return TokenPair{}, fmt.Errorf("failed to store refresh token: %v", err)
+	}
+
 	// Calculate seconds until access token expiry
 	expiresIn := int64(s.config.TokenExpiry / time.Second)
 
 	return TokenPair{
-		AccessToken:  accessTokenString,
-		RefreshToken: refreshTokenString,
-		ExpiresIn:    expiresIn,
+		AccessTokenID:  accessTokenID,
+		RefreshTokenID: refreshTokenID,
+		ExpiresIn:      expiresIn,
 	}, nil
 }
 
 // ValidateToken validates a JWT token and returns the claims
-func (s *JWTService) ValidateToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
+func (s *JWTService) ValidateToken(tokenID int64) (*jwt.Token, jwt.MapClaims, error) {
+	// Get token from Redis
+	tokenString, err := GetToken(tokenID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("token not found: %v", err)
+	}
+
 	// Parse and validate the token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Validate the signing method
@@ -112,9 +136,9 @@ func (s *JWTService) ExtractClaims(claims jwt.MapClaims) (Claims, error) {
 }
 
 // RefreshAccessToken generates a new access token using a refresh token
-func (s *JWTService) RefreshAccessToken(refreshTokenString string) (TokenPair, error) {
+func (s *JWTService) RefreshAccessToken(refreshTokenID int64) (TokenPair, error) {
 	// Validate the refresh token
-	token, claims, err := s.ValidateToken(refreshTokenString)
+	token, claims, err := s.ValidateToken(refreshTokenID)
 	if err != nil {
 		return TokenPair{}, err
 	}
@@ -135,11 +159,6 @@ func (s *JWTService) RefreshAccessToken(refreshTokenString string) (TokenPair, e
 	if !ok {
 		return TokenPair{}, errors.New("invalid token claims")
 	}
-
-	// In a real application, you should fetch the user from the database
-	// to get the current email and role
-	// This is a simplified example
-	// For now, we'll create a new token pair with minimal information
 
 	// Generate a new token pair
 	return s.GenerateTokenPair(uint(userID), "", "")

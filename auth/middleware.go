@@ -2,7 +2,7 @@ package auth
 
 import (
 	"net/http"
-	"strings"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,24 +22,22 @@ func NewAuthMiddleware() *AuthMiddleware {
 // RequireAuth is a middleware that validates JWT tokens
 func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Extract token from Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+		// Get token ID from cookie
+		tokenIDStr, err := c.Cookie("jwt-id")
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "JWT token ID cookie required"})
 			return
 		}
 
-		// Check if the header has the Bearer prefix
-		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
+		// Convert token ID to int64
+		tokenID, err := strconv.ParseInt(tokenIDStr, 10, 64)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token ID format"})
 			return
 		}
-
-		tokenString := tokenParts[1]
 
 		// Validate the token
-		token, claims, err := m.jwtService.ValidateToken(tokenString)
+		token, claims, err := m.jwtService.ValidateToken(tokenID)
 		if err != nil || !token.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			return
@@ -64,6 +62,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		c.Set("email", userClaims.Email)
 		c.Set("role", userClaims.Role)
 		c.Set("user_claims", userClaims)
+		c.Set("token_id", tokenID)
 
 		c.Next()
 	}

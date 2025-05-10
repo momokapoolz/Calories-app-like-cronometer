@@ -2,6 +2,8 @@ package auth
 
 import (
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	//"github.com/momokapoolz/caloriesapp/user/models"
@@ -52,25 +54,95 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, tokenPair)
+	// Set access token ID cookie
+	ctx.SetCookie(
+		"jwt-id",
+		strconv.FormatInt(tokenPair.AccessTokenID, 10),
+		int(tokenPair.ExpiresIn),
+		"/",
+		"",
+		false, // Secure
+		true,  // HttpOnly
+	)
+
+	// Set refresh token ID cookie
+	ctx.SetCookie(
+		"refresh-id",
+		strconv.FormatInt(tokenPair.RefreshTokenID, 10),
+		int(c.jwtService.config.RefreshExpiry/time.Second),
+		"/",
+		"",
+		false, // Secure
+		true,  // HttpOnly
+	)
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Login successful",
+		"expires_in": tokenPair.ExpiresIn,
+	})
 }
 
 // Refresh generates a new access token using a refresh token
 func (c *AuthController) Refresh(ctx *gin.Context) {
-	var request RefreshRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid refresh token"})
+	// Get refresh token ID from cookie
+	refreshIDStr, err := ctx.Cookie("refresh-id")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Refresh token ID cookie required"})
+		return
+	}
+
+	// Convert refresh token ID to int64
+	refreshID, err := strconv.ParseInt(refreshIDStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid refresh token ID format"})
 		return
 	}
 
 	// Generate new token pair
-	tokenPair, err := c.jwtService.RefreshAccessToken(request.RefreshToken)
+	tokenPair, err := c.jwtService.RefreshAccessToken(refreshID)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, tokenPair)
+	// Set new access token ID cookie
+	ctx.SetCookie(
+		"jwt-id",
+		strconv.FormatInt(tokenPair.AccessTokenID, 10),
+		int(tokenPair.ExpiresIn),
+		"/",
+		"",
+		false, // Secure
+		true,  // HttpOnly
+	)
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Token refreshed successfully",
+		"expires_in": tokenPair.ExpiresIn,
+	})
+}
+
+// Logout invalidates the current token
+func (c *AuthController) Logout(ctx *gin.Context) {
+	// Get token ID from context
+	tokenID, exists := ctx.Get("token_id")
+	if !exists {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "No active session"})
+		return
+	}
+
+	// Delete the token from Redis
+	err := DeleteToken(tokenID.(int64))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to invalidate token"})
+		return
+	}
+
+	// Clear cookies
+	ctx.SetCookie("jwt-id", "", -1, "/", "", false, true)
+	ctx.SetCookie("refresh-id", "", -1, "/", "", false, true)
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
 // RegisterRoutes sets up auth endpoints
@@ -79,5 +151,6 @@ func (c *AuthController) RegisterRoutes(router *gin.Engine) {
 	{
 		auth.POST("/login", c.Login)
 		auth.POST("/refresh", c.Refresh)
+		auth.POST("/logout", c.Logout)
 	}
 }
