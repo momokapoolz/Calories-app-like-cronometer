@@ -77,7 +77,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 	)
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Login successful",
+		"message":    "Login successful",
 		"expires_in": tokenPair.ExpiresIn,
 	})
 }
@@ -117,7 +117,7 @@ func (c *AuthController) Refresh(ctx *gin.Context) {
 	)
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"message": "Token refreshed successfully",
+		"message":    "Token refreshed successfully",
 		"expires_in": tokenPair.ExpiresIn,
 	})
 }
@@ -146,7 +146,7 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 }
 
 // RegisterRoutes sets up auth endpoints
-func (c *AuthController) RegisterRoutes(router *gin.Engine) {
+func (c *AuthController) RegisterRoutes(router gin.IRouter) {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", c.Login)

@@ -167,7 +167,7 @@ func (c *UserController) GetProfile(ctx *gin.Context) {
 }
 
 // RegisterRoutes sets up user endpoints
-func (c *UserController) RegisterRoutes(router *gin.Engine) {
+func (c *UserController) RegisterRoutes(router gin.IRouter) {
 	router.POST("/register", c.Register)
 
 	// Protected routes

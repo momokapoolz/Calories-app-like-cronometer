@@ -90,6 +90,6 @@ func (c *UserAuthController) Login(ctx *gin.Context) {
 }
 
 // RegisterRoutes registers the auth routes
-func (c *UserAuthController) RegisterRoutes(router *gin.Engine) {
+func (c *UserAuthController) RegisterRoutes(router gin.IRouter) {
 	router.POST("/login", c.Login)
-} 
+}

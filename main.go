@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/momokapoolz/caloriesapp/auth"
-	"github.com/momokapoolz/caloriesapp/user/database"
-	"github.com/momokapoolz/caloriesapp/user/routes"
 	"log"
 
 	"github.com/joho/godotenv"
+	"github.com/momokapoolz/caloriesapp/auth"
+	"github.com/momokapoolz/caloriesapp/database"
+	"github.com/momokapoolz/caloriesapp/routes"
+	user_database "github.com/momokapoolz/caloriesapp/user/database"
+	user_routes "github.com/momokapoolz/caloriesapp/user/routes"
 )
 
 //TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click
@@ -24,7 +26,8 @@ func main() {
 
 	// Initialize database connection to PostgreSQL
 	log.Println("Connecting to PostgreSQL database...")
-	database.ConnectDatabase()
+	db := database.ConnectDatabase()
+	user_database.ConnectDatabase() // For user module
 
 	// Initialize Redis connection
 	log.Println("Connecting to Redis...")
@@ -33,7 +36,11 @@ func main() {
 	}
 
 	// Set up API routes using Gin
-	router := routes.SetupRoutes()
+	router := routes.SetupRoutes(db)
+	
+	// Set up User routes (from existing module)
+	userRouter := router.Group("/api/v1")
+	user_routes.SetupRoutes(userRouter)
 
 	// Start the Gin server
 	port := "8080"
