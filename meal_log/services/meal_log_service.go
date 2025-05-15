@@ -4,21 +4,50 @@ import (
 	"time"
 	"github.com/momokapoolz/caloriesapp/meal_log/models"
 	"github.com/momokapoolz/caloriesapp/meal_log/repository"
+	mealLogItemsModels "github.com/momokapoolz/caloriesapp/meal_log_items/models"
+	mealLogItemsRepo "github.com/momokapoolz/caloriesapp/meal_log_items/repository"
 )
 
 // MealLogService handles business logic for meal log operations
 type MealLogService struct {
 	repo *repository.MealLogRepository
+	mealLogItemsRepo *mealLogItemsRepo.MealLogItemRepository
 }
 
 // NewMealLogService creates a new meal log service instance
-func NewMealLogService(repo *repository.MealLogRepository) *MealLogService {
-	return &MealLogService{repo: repo}
+func NewMealLogService(repo *repository.MealLogRepository, mealLogItemsRepo *mealLogItemsRepo.MealLogItemRepository) *MealLogService {
+	return &MealLogService{
+		repo: repo,
+		mealLogItemsRepo: mealLogItemsRepo,
+	}
 }
 
 // CreateMealLog creates a new meal log record
 func (s *MealLogService) CreateMealLog(mealLog *models.MealLog) error {
 	return s.repo.Create(mealLog)
+}
+
+// CreateMealLogItem creates a new meal log item
+func (s *MealLogService) CreateMealLogItem(item *mealLogItemsModels.MealLogItem) error {
+	return s.mealLogItemsRepo.Create(item)
+}
+
+// GetMealLogWithItemsByID retrieves a meal log with its items by ID
+func (s *MealLogService) GetMealLogWithItemsByID(id uint) (*models.MealLogWithItems, error) {
+	mealLog, err := s.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	
+	items, err := s.mealLogItemsRepo.GetByMealLogID(id)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &models.MealLogWithItems{
+		MealLog: *mealLog,
+		Items:   items,
+	}, nil
 }
 
 // GetMealLogByID retrieves a meal log record by ID

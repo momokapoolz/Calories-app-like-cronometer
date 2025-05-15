@@ -6,7 +6,7 @@ type MealLogItem struct {
 	MealLogID     uint    `gorm:"column:meal_log_id;not null" json:"meal_log_id"`
 	FoodID        uint    `gorm:"column:food_id;not null" json:"food_id"`
 	Quantity      uint    `gorm:"column:quantity;not null" json:"quantity"`
-	Quantity_     uint    `gorm:"column:quantity_;not null" json:"quantity_"` // Note: Field named as per schema
+	Quantity_     uint    `gorm:"column:quantity_;not null" json:"quantity_"` // Note: Field named as per schema //mistake
 	QuantityGrams float64 `gorm:"column:quantity_grams;not null" json:"quantity_grams"`
 }
 

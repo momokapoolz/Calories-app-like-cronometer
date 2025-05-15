@@ -580,56 +580,118 @@
 ### Create a new meal log
 - **URL**: `/api/v1/meal-logs`
 - **Method**: `POST`
+- **Authentication**: Requires JWT token
 - **Request Body**:
   ```json
   {
-    "user_id": 1,
-    "created_at": "2023-09-22T10:30:45Z",
-    "meal_type": "Breakfast"
+    "meal_type": "Breakfast",
+    "items": [
+      {
+        "food_id": 1,
+        "quantity": 2,
+        "quantity_grams": 100.5
+      },
+      {
+        "food_id": 3,
+        "quantity": 1,
+        "quantity_grams": 50.0
+      }
+    ]
   }
   ```
 - **Success Response**: 
   - **Code**: 201 Created
-  - **Content**: Meal log object
+  - **Content**: 
+    ```json
+    {
+      "meal_log": {
+        "id": 1,
+        "user_id": 5,
+        "created_at": "2023-09-22T10:30:45Z",
+        "meal_type": "Breakfast"
+      },
+      "items": [
+        {
+          "id": 1,
+          "meal_log_id": 1,
+          "food_id": 1,
+          "quantity": 2,
+          "quantity_grams": 100.5
+        },
+        {
+          "id": 2,
+          "meal_log_id": 1,
+          "food_id": 3,
+          "quantity": 1,
+          "quantity_grams": 50.0
+        }
+      ]
+    }
+    ```
 - **Error Response**: 
   - **Code**: 400 Bad Request or 500 Internal Server Error
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
 
 ### Get meal log by ID
 - **URL**: `/api/v1/meal-logs/{id}`
 - **Method**: `GET`
+- **Authentication**: Requires JWT token
 - **URL Parameters**: `id=[uint]`
 - **Success Response**: 
   - **Code**: 200 OK
   - **Content**: Meal log object
 - **Error Response**: 
   - **Code**: 404 Not Found
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
 
 ### Get meal logs by user ID
-- **URL**: `/api/v1/meal-logs/user/{userId}`
+- **URL**: `/api/v1/meal-logs/user`
 - **Method**: `GET`
-- **URL Parameters**: `userId=[uint]`
+- **Authentication**: Requires JWT token (user ID is extracted from token)
 - **Success Response**: 
   - **Code**: 200 OK
   - **Content**: Array of meal log objects
 - **Error Response**: 
   - **Code**: 500 Internal Server Error
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
 
 ### Get meal logs by user ID and date
-- **URL**: `/api/v1/meal-logs/user/{userId}/date/{date}`
+- **URL**: `/api/v1/meal-logs/user/date/{date}`
 - **Method**: `GET`
+- **Authentication**: Requires JWT token (user ID is extracted from token)
 - **URL Parameters**: 
-  - `userId=[uint]`
   - `date=[YYYY-MM-DD]`
 - **Success Response**: 
   - **Code**: 200 OK
   - **Content**: Array of meal log objects
 - **Error Response**: 
   - **Code**: 500 Internal Server Error
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
 
 ### Get meal logs by user ID and date range
-- **URL**: `/api/v1/meal-logs/user/{userId}/date-range`
+- **URL**: `/api/v1/meal-logs/user/date-range`
 - **Method**: `GET`
-- **URL Parameters**: `userId=[uint]`
+- **Authentication**: Requires JWT token (user ID is extracted from token)
 - **Query Parameters**:
   - `startDate=[YYYY-MM-DD]`
   - `endDate=[YYYY-MM-DD]`
@@ -638,10 +700,17 @@
   - **Content**: Array of meal log objects
 - **Error Response**: 
   - **Code**: 400 Bad Request or 500 Internal Server Error
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
 
 ### Update a meal log
 - **URL**: `/api/v1/meal-logs/{id}`
 - **Method**: `PUT`
+- **Authentication**: Requires JWT token (only the owner of the meal log can update it)
 - **URL Parameters**: `id=[uint]`
 - **Request Body**: Same as create meal log
 - **Success Response**: 
@@ -649,10 +718,23 @@
   - **Content**: Updated meal log object
 - **Error Response**: 
   - **Code**: 404 Not Found or 500 Internal Server Error
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  - **Code**: 403 Forbidden
+    ```json
+    {
+      "error": "You are not allowed to update this meal log"
+    }
+    ```
 
 ### Delete a meal log
 - **URL**: `/api/v1/meal-logs/{id}`
 - **Method**: `DELETE`
+- **Authentication**: Requires JWT token (only the owner of the meal log can delete it)
 - **URL Parameters**: `id=[uint]`
 - **Success Response**: 
   - **Code**: 200 OK
@@ -664,6 +746,18 @@
     ```
 - **Error Response**: 
   - **Code**: 404 Not Found or 500 Internal Server Error
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  - **Code**: 403 Forbidden
+    ```json
+    {
+      "error": "You are not allowed to delete this meal log"
+    }
+    ```
 
 ## Meal Log Items Endpoints
 
