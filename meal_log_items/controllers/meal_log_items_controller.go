@@ -1,10 +1,13 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/momokapoolz/caloriesapp/auth"
+	"github.com/momokapoolz/caloriesapp/dto"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/models"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/services"
 )
@@ -145,4 +148,65 @@ func (c *MealLogItemController) DeleteMealLogItemsByMealLogID(ctx *gin.Context) 
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "All items for meal log deleted successfully"})
-} 
+}
+
+// AddItemsToMealLog adds multiple food items to an existing meal log
+func (c *MealLogItemController) AddItemsToMealLog(ctx *gin.Context) {
+	// Get authenticated user from context
+	userClaims, ok := auth.GetCurrentUser(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Parse meal log ID from path parameter
+	mealLogIDStr := ctx.Param("id")
+	mealLogID, err := strconv.ParseUint(mealLogIDStr, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meal log ID format"})
+		return
+	}
+
+	// Verify the meal log belongs to the authenticated user
+	if err := c.service.VerifyMealLogOwnership(uint(mealLogID), userClaims.UserID); err != nil {
+		if errors.Is(err, services.ErrUnauthorizedAccess) {
+			ctx.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to modify this meal log"})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify meal log ownership: " + err.Error()})
+		}
+		return
+	}
+
+	// Parse request body
+	var requestDTO dto.AddItemsToMealLogRequestDTO
+	if err := ctx.ShouldBindJSON(&requestDTO); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate request
+	if len(requestDTO.Items) == 0 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "No items provided"})
+		return
+	}
+
+	// Convert DTO to model objects
+	var mealLogItems []models.MealLogItem
+	for _, item := range requestDTO.Items {
+		mealLogItems = append(mealLogItems, models.MealLogItem{
+			MealLogID:     uint(mealLogID),
+			FoodID:        item.FoodID,
+			Quantity:      item.Quantity,
+			QuantityGrams: item.QuantityGrams,
+		})
+	}
+
+	// Call service to add items
+	createdItems, err := c.service.AddItemsToMealLog(uint(mealLogID), mealLogItems)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add items to meal log: " + err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, createdItems)
+}

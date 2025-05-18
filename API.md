@@ -851,6 +851,75 @@
 - **Error Response**: 
   - **Code**: 500 Internal Server Error
 
+### Add Items to Meal Log
+- **URL**: `/api/v1/meal-logs/:id/items`
+- **Method**: `POST`
+- **Authentication**: Requires JWT token (Cookie-based authentication with jwt-id cookie)
+- **URL Parameters**: `id=[uint]` (Meal Log ID)
+- **Request Body**:
+  ```json
+  {
+    "items": [
+      {
+        "food_id": 1,
+        "quantity": 2,
+        "quantity_grams": 100.5
+      },
+      {
+        "food_id": 3,
+        "quantity": 1,
+        "quantity_grams": 50.0
+      }
+    ]
+  }
+  ```
+- **Success Response**: 
+  - **Code**: 201 Created
+  - **Content**: Array of created meal log item objects
+    ```json
+    [
+      {
+        "id": 1,
+        "meal_log_id": 5,
+        "food_id": 1,
+        "quantity": 2,
+        "quantity_grams": 100.5
+      },
+      {
+        "id": 2,
+        "meal_log_id": 5,
+        "food_id": 3,
+        "quantity": 1,
+        "quantity_grams": 50.0
+      }
+    ]
+    ```
+- **Error Response**: 
+  - **Code**: 400 Bad Request
+    ```json
+    {
+      "error": "No items provided"
+    }
+    ```
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  - **Code**: 403 Forbidden
+    ```json
+    {
+      "error": "You are not allowed to modify this meal log"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "error": "Failed to add items to meal log: <error details>"
+    }
+    ```
+
 ## User Biometrics Endpoints
 
 ### Create a new user biometric
@@ -955,4 +1024,137 @@
     }
     ```
 - **Error Response**: 
-  - **Code**: 404 Not Found or 500 Internal Server Error 
+  - **Code**: 404 Not Found or 500 Internal Server Error
+
+## Dashboard Endpoints
+
+### Get User Dashboard
+- **URL**: `/api/v1/dashboard`
+- **Method**: `GET`
+- **Authentication**: Requires JWT token (Cookie-based authentication with jwt-id cookie)
+- **Query Parameters**:
+  - `date=[YYYY-MM-DD]` (optional, defaults to today)
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "date": "2023-10-25",
+      "total_calories": 1875.5,
+      "number_of_meals": 3,
+      "meal_logs": [
+        {
+          "id": 1,
+          "meal_type": "Breakfast",
+          "created_at": "2023-10-25T08:30:00Z",
+          "total_calories": 450.5,
+          "food_items": [
+            {
+              "id": 1,
+              "food_id": 12,
+              "food_name": "Oatmeal",
+              "quantity": 1,
+              "quantity_grams": 100.0,
+              "calories": 350.5
+            },
+            {
+              "id": 2,
+              "food_id": 15,
+              "food_name": "Apple",
+              "quantity": 1,
+              "quantity_grams": 100.0,
+              "calories": 100.0
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "meal_type": "Lunch",
+          "created_at": "2023-10-25T12:30:00Z",
+          "total_calories": 750.0,
+          "food_items": [
+            {
+              "id": 3,
+              "food_id": 18,
+              "food_name": "Chicken Breast",
+              "quantity": 1,
+              "quantity_grams": 200.0,
+              "calories": 330.0
+            },
+            {
+              "id": 4,
+              "food_id": 20,
+              "food_name": "Brown Rice",
+              "quantity": 1,
+              "quantity_grams": 150.0,
+              "calories": 220.0
+            },
+            {
+              "id": 5,
+              "food_id": 25,
+              "food_name": "Broccoli",
+              "quantity": 1,
+              "quantity_grams": 100.0,
+              "calories": 200.0
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "meal_type": "Dinner",
+          "created_at": "2023-10-25T19:30:00Z",
+          "total_calories": 675.0,
+          "food_items": [
+            {
+              "id": 6,
+              "food_id": 30,
+              "food_name": "Salmon",
+              "quantity": 1,
+              "quantity_grams": 150.0,
+              "calories": 375.0
+            },
+            {
+              "id": 7,
+              "food_id": 35,
+              "food_name": "Sweet Potato",
+              "quantity": 1,
+              "quantity_grams": 150.0,
+              "calories": 150.0
+            },
+            {
+              "id": 8,
+              "food_id": 40,
+              "food_name": "Asparagus",
+              "quantity": 1,
+              "quantity_grams": 100.0,
+              "calories": 150.0
+            }
+          ]
+        }
+      ],
+      "total_macronutrients": {
+        "protein": 120.5,
+        "carbohydrate": 185.3,
+        "fat": 45.7
+      }
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  - **Code**: 400 Bad Request
+    ```json
+    {
+      "error": "Invalid date format. Use YYYY-MM-DD"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "error": "Failed to get dashboard data: [error message]"
+    }
+    ``` 

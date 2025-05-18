@@ -51,6 +51,16 @@ func (r *FoodNutrientRepository) GetByNutrientID(nutrientID uint) ([]models.Food
 	return foodNutrients, err
 }
 
+// GetByFoodIDAndNutrientID retrieves a food nutrient by food ID and nutrient ID
+func (r *FoodNutrientRepository) GetByFoodIDAndNutrientID(foodID, nutrientID uint) (*models.FoodNutrient, error) {
+	var foodNutrient models.FoodNutrient
+	err := r.db.Where("food_id = ? AND nutrient_id = ?", foodID, nutrientID).First(&foodNutrient).Error
+	if err != nil {
+		return nil, err
+	}
+	return &foodNutrient, nil
+}
+
 // Update updates a food nutrient record
 func (r *FoodNutrientRepository) Update(foodNutrient *models.FoodNutrient) error {
 	return r.db.Save(foodNutrient).Error
@@ -59,4 +69,4 @@ func (r *FoodNutrientRepository) Update(foodNutrient *models.FoodNutrient) error
 // Delete removes a food nutrient record
 func (r *FoodNutrientRepository) Delete(id uint) error {
 	return r.db.Delete(&models.FoodNutrient{}, id).Error
-} 
+}

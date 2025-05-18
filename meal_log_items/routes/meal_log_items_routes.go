@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/momokapoolz/caloriesapp/auth"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/controllers"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/repository"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/services"
@@ -14,6 +15,8 @@ func SetupMealLogItemRoutes(router *gin.RouterGroup, db *gorm.DB) {
 	mealLogItemService := services.NewMealLogItemService(mealLogItemRepo)
 	mealLogItemController := controllers.NewMealLogItemController(mealLogItemService)
 
+	authMiddleware := auth.NewAuthMiddleware()
+
 	mealLogItemRoutes := router.Group("/meal-log-items")
 	{
 		mealLogItemRoutes.POST("/", mealLogItemController.CreateMealLogItem)
@@ -24,4 +27,10 @@ func SetupMealLogItemRoutes(router *gin.RouterGroup, db *gorm.DB) {
 		mealLogItemRoutes.DELETE("/:id", mealLogItemController.DeleteMealLogItem)
 		mealLogItemRoutes.DELETE("/meal-log/:mealLogId", mealLogItemController.DeleteMealLogItemsByMealLogID)
 	}
-} 
+
+	// Add route for adding items to a meal log with authentication middleware
+	mealLogRoutes := router.Group("/meal-logs", authMiddleware.RequireAuth())
+	{
+		mealLogRoutes.POST("/:id/items", mealLogItemController.AddItemsToMealLog)
+	}
+}
