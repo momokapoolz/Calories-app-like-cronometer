@@ -1,10 +1,14 @@
 package auth
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // AuthMiddleware provides JWT authentication for routes
@@ -19,33 +23,83 @@ func NewAuthMiddleware() *AuthMiddleware {
 	}
 }
 
+// extractBearerToken extracts the token from the Authorization header
+func extractBearerToken(c *gin.Context) string {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return ""
+	}
+
+	return parts[1]
+}
+
+// validateBearerToken validates a JWT token string directly
+func (m *AuthMiddleware) validateBearerToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(m.jwtService.config.SecretKey), nil
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return token, claims, nil
+	}
+
+	return nil, nil, errors.New("invalid token")
+}
+
 // RequireAuth is a middleware that validates JWT tokens
 func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get token ID from cookie
-		tokenIDStr, err := c.Cookie("jwt-id")
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "JWT token ID cookie required"})
-			return
+		var token *jwt.Token
+		var claims jwt.MapClaims
+		var err error
+
+		// First try Bearer token authentication
+		if bearerToken := extractBearerToken(c); bearerToken != "" {
+			token, claims, err = m.validateBearerToken(bearerToken)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid bearer token"})
+				return
+			}
+		} else {
+			// Fall back to cookie-based authentication
+			tokenIDStr, err := c.Cookie("jwt-id")
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+				return
+			}
+
+			// Convert token ID to int64
+			tokenID, err := strconv.ParseInt(tokenIDStr, 10, 64)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token ID format"})
+				return
+			}
+
+			// Validate the token from Redis
+			token, claims, err = m.jwtService.ValidateToken(tokenID)
+			if err != nil || !token.Valid {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+				return
+			}
+
+			// Store token ID in context for logout
+			c.Set("token_id", tokenID)
 		}
 
-		// Convert token ID to int64
-		tokenID, err := strconv.ParseInt(tokenIDStr, 10, 64)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token ID format"})
-			return
-		}
-
-		// Validate the token
-		token, claims, err := m.jwtService.ValidateToken(tokenID)
-		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-			return
-		}
-
-		// Check token type
-		tokenType, ok := claims["type"].(string)
-		if !ok || tokenType != "access" {
+		// Check token type (only for cookie-based auth)
+		if tokenType, ok := claims["type"].(string); ok && tokenType != "access" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token type"})
 			return
 		}
@@ -62,7 +116,6 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		c.Set("email", userClaims.Email)
 		c.Set("role", userClaims.Role)
 		c.Set("user_claims", userClaims)
-		c.Set("token_id", tokenID)
 
 		c.Next()
 	}
@@ -101,4 +154,21 @@ func GetCurrentUser(c *gin.Context) (Claims, bool) {
 	}
 
 	return userClaims, true
-} 
+}
+
+// CORSMiddleware handles Cross-Origin Resource Sharing (CORS)
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000") //CORS for frontend configuration
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}

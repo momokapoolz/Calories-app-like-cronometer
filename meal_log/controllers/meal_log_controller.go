@@ -1,10 +1,11 @@
 package controllers
 
 import (
-	"github.com/momokapoolz/caloriesapp/auth"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/momokapoolz/caloriesapp/auth"
 
 	"github.com/momokapoolz/caloriesapp/dto"
 

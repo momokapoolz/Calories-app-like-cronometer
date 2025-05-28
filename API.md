@@ -58,9 +58,10 @@
     }
     ```
 
-### User Login
+### User Login with JWT
 - **URL**: `/login`
 - **Method**: `POST`
+- **Description**: Authenticates a user and returns JWT tokens
 - **Request Body**:
   ```json
   {
@@ -98,10 +99,19 @@
       "message": "Invalid credentials"
     }
     ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "status": "error",
+      "message": "Authentication failed",
+      "error": "Redis connection error"
+    }
+    ```
 
-### Auth Login (Cookie-based authentication)
+### Cookie-Based Login (Alternative Method)
 - **URL**: `/auth/login`
 - **Method**: `POST`
+- **Description**: Authenticates a user and sets secure cookies for session management
 - **Request Body**:
   ```json
   {
@@ -112,60 +122,99 @@
 - **Success Response**: 
   - **Code**: 200 OK
   - **Cookies Set**: 
-    - `jwt-id` - Contains the access token ID
-    - `refresh-id` - Contains the refresh token ID
+    - `jwt-id` - Contains the access token ID (HttpOnly)
+    - `refresh-id` - Contains the refresh token ID (HttpOnly)
   - **Content**: 
     ```json
     {
+      "status": "success",
       "message": "Login successful",
-      "expires_in": 3600
+      "data": {
+        "user": {
+          "id": 1,
+          "name": "John Doe",
+          "email": "john@example.com",
+          "role": "user"
+        },
+        "expires_in": 3600
+      }
     }
     ```
 - **Error Response**: 
   - **Code**: 401 Unauthorized
     ```json
     {
-      "error": "Invalid credentials"
+      "status": "error",
+      "message": "Invalid credentials"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "status": "error",
+      "message": "Authentication failed",
+      "error": "Redis connection error"
     }
     ```
 
-### Refresh Token
+### Token Refresh
 - **URL**: `/auth/refresh`
 - **Method**: `POST`
+- **Description**: Generates new access token using refresh token stored in Redis
 - **Required Cookies**:
   - `refresh-id` - Contains the refresh token ID
 - **Success Response**: 
   - **Code**: 200 OK
   - **Cookies Updated**: 
-    - `jwt-id` - Contains the new access token ID
+    - `jwt-id` - Contains the new access token ID (HttpOnly)
   - **Content**: 
     ```json
     {
+      "status": "success",
       "message": "Token refreshed successfully",
-      "expires_in": 3600
+      "data": {
+        "expires_in": 3600
+      }
     }
     ```
 - **Error Response**: 
   - **Code**: 401 Unauthorized
     ```json
     {
-      "error": "Invalid refresh token"
+      "status": "error",
+      "message": "Invalid refresh token"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "status": "error",
+      "message": "Token refresh failed",
+      "error": "Redis connection error"
     }
     ```
 
 ### Logout
 - **URL**: `/auth/logout`
 - **Method**: `POST`
-- **Headers**: 
-  - `Authorization: Bearer {access_token}`
+- **Description**: Invalidates both access and refresh tokens in Redis
+- **Authentication Methods**:
+  1. Cookie-based:
+     - Required Cookies: 
+       - `jwt-id` - Access token ID
+       - `refresh-id` - Refresh token ID
+  2. Token-based:
+     - Headers: 
+       - `Authorization: Bearer {access_token}`
 - **Success Response**: 
   - **Code**: 200 OK
-  - **Cookies Cleared**: 
+  - **Cookies Cleared** (if using cookie-based auth): 
     - `jwt-id` 
     - `refresh-id`
   - **Content**: 
     ```json
     {
+      "status": "success",
       "message": "Logged out successfully"
     }
     ```
@@ -173,7 +222,46 @@
   - **Code**: 400 Bad Request
     ```json
     {
-      "error": "No active session"
+      "status": "error",
+      "message": "No active session"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "status": "error",
+      "message": "Logout failed",
+      "error": "Redis connection error"
+    }
+    ```
+
+### Token Validation
+- **Description**: All protected endpoints support both authentication methods
+- **Authentication Methods**: 
+  1. Cookie-based:
+     - Requires valid `jwt-id` cookie
+     - Server retrieves JWT from Redis using cookie value
+  2. Token-based:
+     - Requires `Authorization: Bearer {access_token}` header
+     - Token is validated directly
+- **Validation Process**:
+  1. Extract token (from cookie ID or Authorization header)
+  2. If using cookies, retrieve actual JWT from Redis
+  3. Validate JWT signature and claims
+  4. Check token expiration
+- **Error Responses**:
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "status": "error",
+      "message": "Invalid or expired token"
+    }
+    ```
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "status": "error",
+      "message": "Token not found in Redis"
     }
     ```
 

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/momokapoolz/caloriesapp/auth"
 	dashboard_routes "github.com/momokapoolz/caloriesapp/dashboard/routes"
 	"github.com/momokapoolz/caloriesapp/food/routes"
 	food_nutrients_routes "github.com/momokapoolz/caloriesapp/food_nutrients/routes"
@@ -15,6 +16,9 @@ import (
 // SetupRoutes initializes all API routes
 func SetupRoutes(db *gorm.DB) *gin.Engine {
 	router := gin.Default()
+
+	// Add CORS middleware
+	router.Use(auth.CORSMiddleware())
 
 	// API version group
 	v1 := router.Group("/api/v1")

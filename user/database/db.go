@@ -2,9 +2,11 @@ package database
 
 import (
 	"fmt"
-	"github.com/momokapoolz/caloriesapp/user/models"
 	"log"
+	"os"
 	"time"
+
+	"github.com/momokapoolz/caloriesapp/user/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -19,7 +21,7 @@ func ConnectDatabase() {
 	var err error
 
 	// Use the postgres database
-	dsn := "host=localhost user=root password=1234 dbname=calorie_app_db port=5433 sslmode=disable"
+	dsn := os.Getenv("POSTGRES_DB_CONNECTION_STRING")
 
 	// Debug log
 	log.Printf("Connecting with DSN: %s\n", dsn)

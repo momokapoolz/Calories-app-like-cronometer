@@ -17,6 +17,26 @@ type AuthController struct {
 	userRepo   *repository.UserRepository
 }
 
+// LoginResponse represents the response for both token-based and cookie-based auth
+type LoginResponse struct {
+	Status  string      `json:"status"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+// TokenResponse represents the response for token-based authentication
+type TokenResponse struct {
+	User      interface{} `json:"user"`
+	Token     string      `json:"token"`
+	ExpiresIn int64       `json:"expires_in"`
+}
+
+// CookieResponse represents the response for cookie-based authentication
+type CookieResponse struct {
+	User      interface{} `json:"user"`
+	ExpiresIn int64       `json:"expires_in"`
+}
+
 // NewAuthController creates a new auth controller
 func NewAuthController(userRepo *repository.UserRepository) *AuthController {
 	return &AuthController{
@@ -54,7 +74,35 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	// Set access token ID cookie
+	// Check if client wants token-based or cookie-based auth
+	authType := ctx.GetHeader("X-Auth-Type")
+	if authType == "token" {
+		// Get the actual token for token-based auth
+		accessToken, err := GetToken(tokenPair.AccessTokenID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve token"})
+			return
+		}
+
+		response := LoginResponse{
+			Status:  "success",
+			Message: "Login successful",
+			Data: TokenResponse{
+				User: gin.H{
+					"id":    user.ID,
+					"name":  user.Name,
+					"email": user.Email,
+					"role":  user.Role,
+				},
+				Token:     accessToken,
+				ExpiresIn: tokenPair.ExpiresIn,
+			},
+		}
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	// Default to cookie-based auth
 	ctx.SetCookie(
 		"jwt-id",
 		strconv.FormatInt(tokenPair.AccessTokenID, 10),
@@ -65,7 +113,6 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		true,  // HttpOnly
 	)
 
-	// Set refresh token ID cookie
 	ctx.SetCookie(
 		"refresh-id",
 		strconv.FormatInt(tokenPair.RefreshTokenID, 10),
@@ -76,10 +123,20 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		true,  // HttpOnly
 	)
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message":    "Login successful",
-		"expires_in": tokenPair.ExpiresIn,
-	})
+	response := LoginResponse{
+		Status:  "success",
+		Message: "Login successful",
+		Data: CookieResponse{
+			User: gin.H{
+				"id":    user.ID,
+				"name":  user.Name,
+				"email": user.Email,
+				"role":  user.Role,
+			},
+			ExpiresIn: tokenPair.ExpiresIn,
+		},
+	}
+	ctx.JSON(http.StatusOK, response)
 }
 
 // Refresh generates a new access token using a refresh token
