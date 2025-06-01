@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"log"
+
 	"github.com/momokapoolz/caloriesapp/user/database"
 	"github.com/momokapoolz/caloriesapp/user/models"
 )
@@ -28,8 +30,17 @@ func (r *UserRepository) FindByID(id uint) (*models.User, error) {
 // FindByEmail retrieves a user by email
 func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 	var user models.User
-	err := database.DB.Where("email = ?", email).First(&user).Error
-	return &user, err
+	log.Printf("[UserRepository] Finding user by email: %s", email)
+
+	// Enable SQL query logging for this operation
+	tx := database.DB.Debug().Where("email = ?", email).First(&user)
+	if tx.Error != nil {
+		log.Printf("[UserRepository] Error finding user: %v", tx.Error)
+		return nil, tx.Error
+	}
+
+	log.Printf("[UserRepository] Found user: ID=%d, Email=%s, PasswordHash=%s", user.ID, user.Email, user.PasswordHash)
+	return &user, nil
 }
 
 // FindByRole retrieves users by role

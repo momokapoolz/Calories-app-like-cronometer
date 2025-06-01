@@ -22,5 +22,5 @@ type User struct {
 
 // TableName overrides the table name
 func (User) TableName() string {
-	return "users"
+	return "User"
 }

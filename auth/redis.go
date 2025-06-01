@@ -3,9 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -18,6 +16,7 @@ var (
 
 // RedisConfig holds Redis connection configuration
 type RedisConfig struct {
+	URL      string
 	Host     string
 	Port     string
 	Password string
@@ -26,52 +25,100 @@ type RedisConfig struct {
 
 // GetRedisConfig returns Redis configuration with sensible defaults
 func GetRedisConfig() RedisConfig {
-	host := os.Getenv("REDIS_HOST")
-	if host == "" {
-		host = "localhost"
-	}
 
-	port := os.Getenv("REDIS_PORT")
-	if port == "" {
-		port = "6379"
-	}
+	url := os.Getenv("REDIS_URL")
 
-	password := os.Getenv("REDIS_PASSWORD")
-	if password == "" {
-		log.Println("Warning: REDIS_PASSWORD not set in environment variables")
-	}
+	// Use local connection parameters
+	//host := os.Getenv("REDIS_HOST")
+	//if host == "" {
+	//	host = "localhost"
+	//}
+	//
+	//port := os.Getenv("REDIS_PORT")
+	//if port == "" {
+	//	port = "6379"
+	//}
+	//
+	//password := os.Getenv("REDIS_PASSWORD")
+	//
+	//dbStr := os.Getenv("REDIS_DB")
+	//db := 0
+	//if dbStr != "" {
+	//	if parsedDB, err := strconv.Atoi(dbStr); err == nil {
+	//		db = parsedDB
+	//	} else {
+	//		log.Printf("Warning: Invalid REDIS_DB value '%s', using default DB 0", dbStr)
+	//	}
+	//}
+	//
+	//return RedisConfig{
+	//	Host:     host,
+	//	Port:     port,
+	//	Password: password,
+	//	DB:       db,
+	//}
 
-	dbStr := os.Getenv("REDIS_DB")
-	db := 0
-	if dbStr != "" {
-		if parsedDB, err := strconv.Atoi(dbStr); err == nil {
-			db = parsedDB
-		} else {
-			log.Printf("Warning: Invalid REDIS_DB value '%s', using default DB 0", dbStr)
-		}
-	}
-
-	return RedisConfig{
-		Host:     host,
-		Port:     port,
-		Password: password,
-		DB:       db,
-	}
+	//remote URL connection
+	//if url != "" {
+	//	opt, err := redis.ParseURL(url)
+	//	if err != nil {
+	//		log.Fatalf("Invalid REDIS_URL: %v", err)
+	//	}
+	//
+	//	RedisClient = redis.NewClient(opt)
+	//
+	//	// Test the connection
+	//	ctx := context.Background()
+	//	if _, err := RedisClient.Ping(ctx).Result(); err != nil {
+	//		log.Fatalf("Failed to connect to Redis: %v", err)
+	//	}
+	//}
+	return RedisConfig{URL: url}
 }
 
 // ConnectRedis initializes the Redis connection
 func ConnectRedis() error {
 	config := GetRedisConfig()
-	
-	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", config.Host, config.Port),
-		Password: config.Password,
-		DB:       config.DB,
-	})
+
+	// Use only local connection parameters
+	//options := &redis.Options{
+	//	Addr:     fmt.Sprintf("%s:%s", config.Host, config.Port),
+	//	Password: config.Password,
+	//	DB:       config.DB,
+	//}
+	//
+	//RedisClient = redis.NewClient(options)
+	//
+	//// Test the connection
+	//ctx := context.Background()
+	//_, err := RedisClient.Ping(ctx).Result()
+	//if err != nil {
+	//	return fmt.Errorf("failed to connect to Redis: %v", err)
+	//}
+	//
+	//return nil
+
+	var options *redis.Options
+	var err error
+
+	if config.URL != "" {
+		options, err = redis.ParseURL(config.URL)
+		if err != nil {
+			return fmt.Errorf("invalid REDIS_URL: %v", err)
+		}
+	} else {
+		options = &redis.Options{
+			Addr:     fmt.Sprintf("%s:%s", config.Host, config.Port),
+			Password: config.Password,
+			DB:       config.DB,
+		}
+	}
+
+	RedisClient = redis.NewClient(options)
 
 	// Test the connection
 	ctx := context.Background()
-	_, err := RedisClient.Ping(ctx).Result()
+	_, err = RedisClient.Ping(ctx).Result()
 	if err != nil {
 		return fmt.Errorf("failed to connect to Redis: %v", err)
 	}
@@ -82,7 +129,7 @@ func ConnectRedis() error {
 // StoreToken stores a JWT token in Redis and returns its ID
 func StoreToken(token string, expiry time.Duration) (int64, error) {
 	ctx := context.Background()
-	
+
 	// Get the next available ID
 	id, err := RedisClient.Incr(ctx, TokenKey+":counter").Result()
 	if err != nil {
@@ -111,4 +158,4 @@ func DeleteToken(id int64) error {
 	ctx := context.Background()
 	key := fmt.Sprintf("%s:%d", TokenKey, id)
 	return RedisClient.Del(ctx, key).Err()
-} 
+}

@@ -20,15 +20,91 @@ import (
 
 var DB *gorm.DB
 
+// DBConfig holds database connection configuration
+type DBConfig struct {
+	URL      string //Supabase connection
+	Host     string
+	Port     string
+	User     string
+	Password string
+	DBName   string
+	SSLMode  string
+}
+
+// GetDBConfig returns database configuration from environment variables
+func GetDBConfig() DBConfig {
+	//supabase connection
+	url := os.Getenv("POSTGRES_DB_CONNECTION_STRING")
+	if url != "" {
+		return DBConfig{URL: url}
+	}
+
+	return DBConfig{URL: url}
+
+	//local connection
+	//host := os.Getenv("DB_HOST")
+	//if host == "" {
+	//	host = "localhost"
+	//}
+	//
+	//port := os.Getenv("DB_PORT")
+	//if port == "" {
+	//	port = "5433"
+	//}
+	//
+	//user := os.Getenv("DB_USER")
+	//if user == "" {
+	//	user = "root"
+	//}
+	//
+	//password := os.Getenv("DB_PASSWORD")
+	//if password == "" {
+	//	log.Println("Warning: DB_PASSWORD not set in environment variables")
+	//}
+	//
+	//dbName := os.Getenv("DB_NAME")
+	//if dbName == "" {
+	//	dbName = "calorie_app_db"
+	//}
+	//
+	//sslMode := os.Getenv("DB_SSL_MODE")
+	//if sslMode == "" {
+	//	sslMode = "disable"
+	//}
+	//
+	//return DBConfig{
+	//	Host:     host,
+	//	Port:     port,
+	//	User:     user,
+	//	Password: password,
+	//	DBName:   dbName,
+	//	SSLMode:  sslMode,
+	//}
+}
+
 // ConnectDatabase initializes the database connection
 func ConnectDatabase() *gorm.DB {
 	var err error
 
-	// Use hardcoded DSN string
-	dsn := os.Getenv("POSTGRES_DB_CONNECTION_STRING")
+	config := GetDBConfig()
+
+	// Construct DSN string from config
+	var dsn string
+	if config.URL != "" {
+		dsn = config.URL //remote connection to supabase
+	} else {
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+			config.Host,
+			config.User,
+			config.Password,
+			config.DBName,
+			config.Port,
+			config.SSLMode,
+		)
+	}
 
 	// Debug log
-	log.Printf("Connecting with DSN: %s\n", dsn)
+	log.Printf("Connecting to PostgreSQL database on %s:%s...\n", config.Host, config.Port)
 
 	// Set up logger for detailed SQL logs
 	newLogger := logger.New(
@@ -54,7 +130,7 @@ func ConnectDatabase() *gorm.DB {
 	if err != nil {
 		// Try to provide more detailed error message
 		log.Printf("Error details: %v\n", err)
-		log.Printf("Make sure PostgreSQL is running on port 5433 and the 'calorie_app_db' database exists")
+		log.Printf("Make sure PostgreSQL is running on port %s and the '%s' database exists", config.Port, config.DBName)
 		log.Fatal("Failed to connect to the database: ", err)
 	}
 
