@@ -416,7 +416,8 @@
   {
     "name": "Apple",
     "serving_size_gram": 100,
-    "source": "USDA"
+    "source": "USDA",
+    "image_url": "https://example.com/apple.jpg"
   }
   ```
 - **Success Response**: 
@@ -427,7 +428,8 @@
       "id": 1,
       "name": "Apple",
       "serving_size_gram": 100,
-      "source": "USDA"
+      "source": "USDA",
+      "image_url": "https://example.com/apple.jpg"
     }
     ```
 - **Error Response**: 
@@ -435,6 +437,12 @@
     ```json
     {
       "error": "Invalid request format"
+    }
+    ```
+  - **Code**: 400 Bad Request
+    ```json
+    {
+      "error": "Image URL must be a valid URL"
     }
     ```
   - **Code**: 500 Internal Server Error
