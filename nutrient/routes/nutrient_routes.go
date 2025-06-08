@@ -8,7 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// SetupNutrientRoutes initializes nutrient routes
 func SetupNutrientRoutes(router *gin.RouterGroup, db *gorm.DB) {
 	nutrientRepo := repository.NewNutrientRepository(db)
 	nutrientService := services.NewNutrientService(nutrientRepo)
@@ -23,4 +22,4 @@ func SetupNutrientRoutes(router *gin.RouterGroup, db *gorm.DB) {
 		nutrientRoutes.PUT("/:id", nutrientController.UpdateNutrient)
 		nutrientRoutes.DELETE("/:id", nutrientController.DeleteNutrient)
 	}
-} 
+}

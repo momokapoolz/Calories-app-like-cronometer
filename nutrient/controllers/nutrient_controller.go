@@ -9,7 +9,6 @@ import (
 	"github.com/momokapoolz/caloriesapp/nutrient/services"
 )
 
-// NutrientController handles HTTP requests for nutrient operations
 type NutrientController struct {
 	service *services.NutrientService
 }
@@ -115,4 +114,4 @@ func (c *NutrientController) DeleteNutrient(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Nutrient deleted successfully"})
-} 
+}

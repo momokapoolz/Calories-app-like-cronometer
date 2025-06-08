@@ -37,7 +37,7 @@ func main() {
 
 	// Set up API routes using Gin
 	router := routes.SetupRoutes(db)
-	
+
 	// Set up User routes (from existing module)
 	userRouter := router.Group("/api/v1")
 	user_routes.SetupRoutes(userRouter)

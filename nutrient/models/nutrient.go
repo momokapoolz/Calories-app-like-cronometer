@@ -1,6 +1,5 @@
 package models
 
-// Nutrient represents the nutrient table in the database
 type Nutrient struct {
 	ID       uint   `gorm:"primaryKey;column:id" json:"id"`
 	Name     string `gorm:"column:name;not null" json:"name"`

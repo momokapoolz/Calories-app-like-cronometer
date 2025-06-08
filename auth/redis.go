@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -127,35 +128,32 @@ func ConnectRedis() error {
 }
 
 // StoreToken stores a JWT token in Redis and returns its ID
-func StoreToken(token string, expiry time.Duration) (int64, error) {
+func StoreToken(token string, expiry time.Duration) (string, error) {
 	ctx := context.Background()
 
-	// Get the next available ID
-	id, err := RedisClient.Incr(ctx, TokenKey+":counter").Result()
+	// Generate a random UUID for the token ID
+	tokenID := uuid.New().String()
+
+	// Store the token with the UUID as key
+	key := fmt.Sprintf("%s:%s", TokenKey, tokenID)
+	err := RedisClient.Set(ctx, key, token, expiry).Err()
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
-	// Store the token with the ID as key
-	key := fmt.Sprintf("%s:%d", TokenKey, id)
-	err = RedisClient.Set(ctx, key, token, expiry).Err()
-	if err != nil {
-		return 0, err
-	}
-
-	return id, nil
+	return tokenID, nil
 }
 
 // GetToken retrieves a JWT token from Redis by ID
-func GetToken(id int64) (string, error) {
+func GetToken(id string) (string, error) {
 	ctx := context.Background()
-	key := fmt.Sprintf("%s:%d", TokenKey, id)
+	key := fmt.Sprintf("%s:%s", TokenKey, id)
 	return RedisClient.Get(ctx, key).Result()
 }
 
 // DeleteToken removes a JWT token from Redis by ID
-func DeleteToken(id int64) error {
+func DeleteToken(id string) error {
 	ctx := context.Background()
-	key := fmt.Sprintf("%s:%d", TokenKey, id)
+	key := fmt.Sprintf("%s:%s", TokenKey, id)
 	return RedisClient.Del(ctx, key).Err()
 }

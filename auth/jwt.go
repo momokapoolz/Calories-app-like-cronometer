@@ -22,8 +22,8 @@ func NewJWTService() *JWTService {
 
 // TokenPair represents a pair of JWT tokens (access and refresh)
 type TokenPair struct {
-	AccessTokenID  int64  `json:"access_token_id"`
-	RefreshTokenID int64  `json:"refresh_token_id"`
+	AccessTokenID  string `json:"access_token_id"`
+	RefreshTokenID string `json:"refresh_token_id"`
 	ExpiresIn      int64  `json:"expires_in"` // Seconds until access token expires
 }
 
@@ -83,7 +83,7 @@ func (s *JWTService) GenerateTokenPair(userID uint, email, role string) (TokenPa
 }
 
 // ValidateToken validates a JWT token and returns the claims
-func (s *JWTService) ValidateToken(tokenID int64) (*jwt.Token, jwt.MapClaims, error) {
+func (s *JWTService) ValidateToken(tokenID string) (*jwt.Token, jwt.MapClaims, error) {
 	// Get token from Redis
 	tokenString, err := GetToken(tokenID)
 	if err != nil {
@@ -136,13 +136,13 @@ func (s *JWTService) ExtractClaims(claims jwt.MapClaims) (Claims, error) {
 }
 
 // RefreshAccessToken generates a new access token using a refresh token
-func (s *JWTService) RefreshAccessToken(refreshTokenID int64) (TokenPair, error) {
+func (s *JWTService) RefreshAccessToken(refreshTokenID string) (TokenPair, error) {
 	// Validate the refresh token
 	token, claims, err := s.ValidateToken(refreshTokenID)
 	if err != nil {
 		return TokenPair{}, err
 	}
-	
+
 	// Ensure token is valid
 	if !token.Valid {
 		return TokenPair{}, errors.New("invalid refresh token")

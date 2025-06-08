@@ -84,7 +84,7 @@ func (c *UserAuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("[Login] Generated token pair: AccessTokenID=%d, RefreshTokenID=%d", tokenPair.AccessTokenID, tokenPair.RefreshTokenID)
+	log.Printf("[Login] Generated token pair: AccessTokenID=%s, RefreshTokenID=%s", tokenPair.AccessTokenID, tokenPair.RefreshTokenID)
 
 	// Return tokens to client
 	ctx.JSON(http.StatusOK, gin.H{

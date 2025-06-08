@@ -1,11 +1,12 @@
 package main
 
 import (
+	"testing"
+	"time"
+
 	"github.com/momokapoolz/caloriesapp/user/database"
 	"github.com/momokapoolz/caloriesapp/user/models"
 	"github.com/momokapoolz/caloriesapp/user/repository"
-	"testing"
-	"time"
 )
 
 func TestMain(m *testing.M) {

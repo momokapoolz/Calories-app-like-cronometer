@@ -2,7 +2,6 @@ package auth
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -105,7 +104,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 	// Default to cookie-based auth
 	ctx.SetCookie(
 		"jwt-id",
-		strconv.FormatInt(tokenPair.AccessTokenID, 10),
+		tokenPair.AccessTokenID,
 		int(tokenPair.ExpiresIn),
 		"/",
 		"",
@@ -115,7 +114,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 
 	ctx.SetCookie(
 		"refresh-id",
-		strconv.FormatInt(tokenPair.RefreshTokenID, 10),
+		tokenPair.RefreshTokenID,
 		int(c.jwtService.config.RefreshExpiry/time.Second),
 		"/",
 		"",
@@ -142,16 +141,9 @@ func (c *AuthController) Login(ctx *gin.Context) {
 // Refresh generates a new access token using a refresh token
 func (c *AuthController) Refresh(ctx *gin.Context) {
 	// Get refresh token ID from cookie
-	refreshIDStr, err := ctx.Cookie("refresh-id")
+	refreshID, err := ctx.Cookie("refresh-id")
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Refresh token ID cookie required"})
-		return
-	}
-
-	// Convert refresh token ID to int64
-	refreshID, err := strconv.ParseInt(refreshIDStr, 10, 64)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid refresh token ID format"})
 		return
 	}
 
@@ -165,7 +157,7 @@ func (c *AuthController) Refresh(ctx *gin.Context) {
 	// Set new access token ID cookie
 	ctx.SetCookie(
 		"jwt-id",
-		strconv.FormatInt(tokenPair.AccessTokenID, 10),
+		tokenPair.AccessTokenID,
 		int(tokenPair.ExpiresIn),
 		"/",
 		"",
@@ -189,7 +181,7 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 	}
 
 	// Delete the token from Redis
-	err := DeleteToken(tokenID.(int64))
+	err := DeleteToken(tokenID.(string))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to invalidate token"})
 		return
@@ -202,9 +194,10 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
-// RegisterRoutes sets up auth endpoints
 func (c *AuthController) RegisterRoutes(router gin.IRouter) {
+
 	auth := router.Group("/auth")
+	auth.Use(CORSMiddleware())
 	{
 		auth.POST("/login", c.Login)
 		auth.POST("/refresh", c.Refresh)

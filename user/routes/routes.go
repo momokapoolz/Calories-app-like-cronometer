@@ -13,6 +13,7 @@ import (
 func SetupRoutes(rg *gin.RouterGroup) {
 	// Apply middleware specific to user routes if needed
 	rg.Use(middleware.LoggingMiddleware())
+	rg.Use(auth.CORSMiddleware())
 
 	// Set up repositories and services
 	userRepo := repository.NewUserRepository()
@@ -46,5 +47,5 @@ func SetupRoutes(rg *gin.RouterGroup) {
 	}
 
 	// Set up JWT auth routes and middleware
-	auth.SetupAuth(rg, userRepo)
+	//auth.SetupAuth(rg, userRepo)
 }

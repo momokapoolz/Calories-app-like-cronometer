@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +21,14 @@ func NewAuthMiddleware() *AuthMiddleware {
 	return &AuthMiddleware{
 		jwtService: NewJWTService(),
 	}
+}
+
+// isUUID checks if a string is a valid UUID format
+func isUUID(s string) bool {
+	// UUID regex pattern (supports both v4 and other UUID formats)
+	uuidPattern := `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+	matched, _ := regexp.MatchString(uuidPattern, s)
+	return matched
 }
 
 // extractBearerToken extracts the token from the Authorization header
@@ -58,19 +66,45 @@ func (m *AuthMiddleware) validateBearerToken(tokenString string) (*jwt.Token, jw
 	return nil, nil, errors.New("invalid token")
 }
 
+// validateBearerTokenOrID validates either a JWT token string or a token ID (UUID)
+func (m *AuthMiddleware) validateBearerTokenOrID(tokenString string) (*jwt.Token, jwt.MapClaims, string, error) {
+	// Check if the token is a UUID (token ID)
+	if isUUID(tokenString) {
+		// It's a token ID, retrieve the actual JWT from Redis
+		token, claims, err := m.jwtService.ValidateToken(tokenString)
+		if err != nil {
+			return nil, nil, "", fmt.Errorf("failed to validate token ID: %v", err)
+		}
+		return token, claims, tokenString, nil
+	} else {
+		// It's a direct JWT token, validate it directly
+		token, claims, err := m.validateBearerToken(tokenString)
+		if err != nil {
+			return nil, nil, "", err
+		}
+		return token, claims, "", nil
+	}
+}
+
 // RequireAuth is a middleware that validates JWT tokens
 func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var token *jwt.Token
 		var claims jwt.MapClaims
+		var tokenID string
 		var err error
 
 		// First try Bearer token authentication
 		if bearerToken := extractBearerToken(c); bearerToken != "" {
-			token, claims, err = m.validateBearerToken(bearerToken)
+			token, claims, tokenID, err = m.validateBearerTokenOrID(bearerToken)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid bearer token"})
 				return
+			}
+
+			// Store token ID in context for logout if it was a UUID
+			if tokenID != "" {
+				c.Set("token_id", tokenID)
 			}
 		} else {
 			// Fall back to cookie-based authentication
@@ -80,12 +114,8 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 				return
 			}
 
-			// Convert token ID to int64
-			tokenID, err := strconv.ParseInt(tokenIDStr, 10, 64)
-			if err != nil {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token ID format"})
-				return
-			}
+			// Use the token ID directly (now a string)
+			tokenID = tokenIDStr
 
 			// Validate the token from Redis
 			token, claims, err = m.jwtService.ValidateToken(tokenID)
@@ -98,7 +128,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			c.Set("token_id", tokenID)
 		}
 
-		// Check token type (only for cookie-based auth)
+		// Check token type (only for cookie-based auth or token ID based auth)
 		if tokenType, ok := claims["type"].(string); ok && tokenType != "access" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token type"})
 			return

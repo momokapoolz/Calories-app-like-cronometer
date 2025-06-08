@@ -15,5 +15,5 @@ type LoginRequest struct {
 
 // RefreshRequest represents a token refresh request
 type RefreshRequest struct {
-	RefreshTokenID int64 `json:"refresh_token_id" binding:"required"`
-} 
+	RefreshTokenID string `json:"refresh_token_id" binding:"required"`
+}
