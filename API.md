@@ -6,9 +6,12 @@ This document provides a detailed description of the Calories App API, including
 
 ## Authentication
 
-Authentication is handled via JWT (JSON Web Tokens). The API supports two methods for handling tokens:
-1.  **Token-Based**: The client receives token IDs (UUIDs) and sends them back in the `Authorization` header for subsequent requests. This is suitable for mobile or non-browser clients.
-2.  **Cookie-Based**: The server sets secure, `HttpOnly` cookies containing the token IDs. This is the recommended approach for web frontends to mitigate XSS attacks.
+Authentication is handled via JWT (JSON Web Tokens). Currently, the API primarily uses **Token-Based authentication** through the User Module endpoints.
+
+**Current Authentication Method:**
+- **Token-Based**: The client receives token IDs (UUIDs) and sends them back in the `Authorization` header for subsequent requests. This is suitable for both mobile and web clients.
+
+**Note**: Cookie-based authentication through the Auth Module (`/api/v1/auth/*`) is temporarily disabled. Use the User Module endpoints (`/api/v1/login`, `/api/v1/logout`) instead.
 
 ### Register a New User
 - **URL**: `/api/v1/register`
@@ -62,9 +65,7 @@ Authentication is handled via JWT (JSON Web Tokens). The API supports two method
 ### User Login
 - **URL**: `/api/v1/login`
 - **Method**: `POST`
-- **Description**: Authenticates a user. The response type (token or cookie) is determined by the `X-Auth-Type` header.
-- **Headers**:
-  - `X-Auth-Type` (optional): Set to `token` to receive tokens in the response body. If omitted, the server will set `HttpOnly` cookies.
+- **Description**: Authenticates a user and returns JWT token IDs for token-based authentication.
 - **Request Body**:
   ```json
   {
@@ -72,28 +73,7 @@ Authentication is handled via JWT (JSON Web Tokens). The API supports two method
     "password": "securepassword"
   }
   ```
-
----
-
-#### Response Type 1: Token-Based (`X-Auth-Type: token`)
 - **Success Response (Code `200 OK`)**:
-  - **Content**: 
-    ```json
-    {
-        "status": "success",
-        "message": "Login successful",
-        "data": {
-            "access_token_id": "0097fcb4-abeb-4140-8683-181f7d796755",
-            "refresh_token_id": "15aff74e-bafe-410b-a7f7-fa5a96e530a6"
-        }
-    }
-    ```
-
-#### Response Type 2: Cookie-Based (Default)
-- **Success Response (Code `200 OK`)**: 
-  - **Cookies Set**: 
-    - `jwt-id`: Contains the access token ID (HttpOnly, Secure)
-    - `refresh-id`: Contains the refresh token ID (HttpOnly, Secure)
   - **Content**: 
     ```json
     {
@@ -105,10 +85,16 @@ Authentication is handled via JWT (JSON Web Tokens). The API supports two method
           "name": "John Doe",
           "email": "john@example.com",
           "role": "user"
+        },
+        "tokens": {
+          "access_token_id": "0097fcb4-abeb-4140-8683-181f7d796755",
+          "refresh_token_id": "15aff74e-bafe-410b-a7f7-fa5a96e530a6",
+          "expires_in": 3600
         }
       }
     }
     ```
+
 ---
 
 - **Common Error Responses**: 
@@ -116,10 +102,37 @@ Authentication is handled via JWT (JSON Web Tokens). The API supports two method
   - **Code `500 Internal Server Error`**: `{"status": "error", "message": "Authentication failed", "error": "..."}`
 
 
-### Token Refresh
+### User Logout
+- **URL**: `/api/v1/logout`
+- **Method**: `POST`
+- **Description**: Invalidates the current user's access token and logs them out
+- **Authentication**: Required (Bearer token with access_token_id)
+- **Headers**: 
+  - `Authorization: Bearer {access_token_id}`
+- **Success Response (Code `200 OK`)**:
+  - **Content**: 
+    ```json
+    {
+      "status": "success",
+      "message": "Logged out successfully"
+    }
+    ```
+- **Error Responses**: 
+  - **Code `400 Bad Request`**: `{"status": "error", "message": "No active session"}`
+  - **Code `401 Unauthorized`**: `{"error": "Authentication required"}`
+  - **Code `500 Internal Server Error`**: `{"status": "error", "message": "Failed to invalidate token"}`
+
+---
+
+## Auth Module Endpoints (Temporarily Disabled)
+
+> **Note**: The following Auth Module endpoints (`/api/v1/auth/*`) are temporarily disabled. Use the User Module endpoints above instead.
+
+### Token Refresh (Temporarily Disabled)
 - **URL**: `/api/v1/auth/refresh`
 - **Method**: `POST`
 - **Description**: Generates a new access token using the refresh token. Requires cookie-based authentication.
+- **Status**: ⚠️ **Temporarily Disabled**
 - **Required Cookies**:
   - `refresh-id`: Contains the refresh token ID.
 - **Success Response (Code `200 OK`)**:
@@ -129,10 +142,11 @@ Authentication is handled via JWT (JSON Web Tokens). The API supports two method
 - **Error Response (`401 Unauthorized`)**: `{"status": "error", "message": "Invalid refresh token"}`
 
 
-### Logout
+### Auth Logout (Temporarily Disabled)
 - **URL**: `/api/v1/auth/logout`
 - **Method**: `POST`
 - **Description**: Invalidates both access and refresh tokens by deleting them from the server's store (Redis).
+- **Status**: ⚠️ **Temporarily Disabled** - Use `/api/v1/logout` instead
 - **Authentication**: This endpoint works with both cookie-based and token-based authentication. The server will automatically detect the method used.
 - **Success Response (Code `200 OK`)**:
   - **Cookies Cleared**: If using cookie-based auth, `jwt-id` and `refresh-id` cookies are cleared.
@@ -142,20 +156,19 @@ Authentication is handled via JWT (JSON Web Tokens). The API supports two method
 
 ### Token Validation for Protected Endpoints
 All protected endpoints validate authentication credentials on every request.
-- **Method 1: Token-Based (Header)**
-  - The client must include an `Authorization` header.
-  - The token can be either the **full JWT** or the **access\_token\_id (UUID)**. The backend middleware is designed to handle both formats seamlessly.
-  - **Format**: `Authorization: Bearer {jwt_or_uuid}`
-- **Method 2: Cookie-Based**
-  - The browser must send the `jwt-id` cookie with each request.
-  - The server uses the ID from the cookie to retrieve the full JWT from its Redis store for validation.
+
+**Current Method: Token-Based (Header)**
+- The client must include an `Authorization` header.
+- The token can be either the **full JWT** or the **access\_token\_id (UUID)**. The backend middleware is designed to handle both formats seamlessly.
+- **Format**: `Authorization: Bearer {jwt_or_uuid}`
+
+**Temporarily Disabled: Cookie-Based**
+- ⚠️ Cookie-based authentication is temporarily disabled.
+- Previously, browsers could send the `jwt-id` cookie with each request, but this functionality is currently unavailable.
 
 - **Common Error Response (`401 Unauthorized`)**:
   ```json
-  {
-    "error": "Invalid bearer token" 
-  } 
-  // or
+
   {
     "error": "Authentication required"
   }
@@ -164,9 +177,9 @@ All protected endpoints validate authentication credentials on every request.
 ## Protected Endpoints
 
 ### Get User Profile
-- **URL**: `/api/v1/api/profile`
+- **URL**: `/api/v1/profile`
 - **Method**: `GET`
-- **Authentication**: Required (Cookie or `Authorization: Bearer` header)
+- **Authentication**: Required (`Authorization: Bearer` header with access_token_id)
 - **Success Response (Code `200 OK`)**:
   - **Content**: 
     ```json

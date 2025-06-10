@@ -116,6 +116,44 @@
     }
     ```
 
+### User Logout
+- **URL**: `/api/v1/logout`
+- **Method**: `POST`
+- **Description**: Invalidates the current user's token and logs them out
+- **Authentication**: Requires valid JWT token (Bearer authentication)
+- **Headers**: 
+  - `Authorization: Bearer {access_token_id}`
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "status": "success",
+      "message": "Logged out successfully"
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 400 Bad Request
+    ```json
+    {
+      "status": "error",
+      "message": "No active session"
+    }
+    ```
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Authentication required"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "status": "error",
+      "message": "Failed to invalidate token"
+    }
+    ```
+
 ### Auth Login (Cookie-Based)
 - **URL**: `/api/v1/auth/login`
 - **Method**: `POST`

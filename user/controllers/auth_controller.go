@@ -102,7 +102,51 @@ func (c *UserAuthController) Login(ctx *gin.Context) {
 	})
 }
 
+// Logout invalidates the current user's token
+func (c *UserAuthController) Logout(ctx *gin.Context) {
+	log.Printf("[Logout] Attempting logout")
+
+	// Get token ID from context (set by auth middleware)
+	tokenID, exists := ctx.Get("token_id")
+	if !exists {
+		log.Printf("[Logout] No token ID found in context")
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"message": "No active session",
+		})
+		return
+	}
+
+	log.Printf("[Logout] Token ID found: %s", tokenID.(string))
+
+	// Delete the token from Redis
+	err := auth.DeleteToken(tokenID.(string))
+	if err != nil {
+		log.Printf("[Logout] Failed to delete token: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"message": "Failed to invalidate token",
+		})
+		return
+	}
+
+	log.Printf("[Logout] Token successfully invalidated")
+
+	// Return success response
+	ctx.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Logged out successfully",
+	})
+}
+
 // RegisterRoutes registers the auth routes
 func (c *UserAuthController) RegisterRoutes(router gin.IRouter) {
+	// Auth middleware for protected routes
+	authMiddleware := auth.NewAuthMiddleware()
+
+	// Public routes
 	router.POST("/login", c.Login)
+
+	// Protected routes (require authentication)
+	router.POST("/logout", authMiddleware.RequireAuth(), c.Logout)
 }

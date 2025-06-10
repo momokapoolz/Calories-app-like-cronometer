@@ -172,7 +172,7 @@ func (c *UserController) RegisterRoutes(router gin.IRouter) {
 
 	// Protected routes
 	authMiddleware := auth.NewAuthMiddleware()
-	protected := router.Group("/api")
+	protected := router.Group("")
 	protected.Use(authMiddleware.RequireAuth())
 	{
 		protected.GET("/profile", c.GetProfile)
