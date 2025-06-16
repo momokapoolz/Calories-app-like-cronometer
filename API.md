@@ -1022,6 +1022,197 @@ All protected endpoints validate authentication credentials on every request.
 - **Error Response**: 
   - **Code**: 404 Not Found or 500 Internal Server Error
 
+### Get biometric progress
+- **URL**: `/api/v1/user-biometrics/user/{userId}/progress/{type}`
+- **Method**: `GET`
+- **URL Parameters**: 
+  - `userId=[uint]`
+  - `type=[string]`
+- **Query Parameters**:
+  - `startDate=[YYYY-MM-DD]` (optional, defaults to 30 days ago)
+  - `endDate=[YYYY-MM-DD]` (optional, defaults to today)
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "type": "weight",
+      "unit": "kg",
+      "current_value": 75.5,
+      "previous_value": 78.0,
+      "overall_change": -2.5,
+      "percent_change": -3.21,
+      "trend": "down",
+      "data_points": [
+        {
+          "date": "2023-10-01T00:00:00Z",
+          "value": 78.0,
+          "change": 0,
+          "trend": "stable"
+        },
+        {
+          "date": "2023-10-15T00:00:00Z",
+          "value": 76.5,
+          "change": -1.5,
+          "trend": "down"
+        },
+        {
+          "date": "2023-10-30T00:00:00Z",
+          "value": 75.5,
+          "change": -1.0,
+          "trend": "down"
+        }
+      ],
+      "start_date": "2023-10-01T00:00:00Z",
+      "end_date": "2023-10-30T23:59:59Z"
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 400 Bad Request or 500 Internal Server Error
+
+### Get chart data
+- **URL**: `/api/v1/user-biometrics/user/{userId}/chart/{type}`
+- **Method**: `GET`
+- **URL Parameters**: 
+  - `userId=[uint]`
+  - `type=[string]`
+- **Query Parameters**:
+  - `startDate=[YYYY-MM-DD]` (optional, defaults to 30 days ago)
+  - `endDate=[YYYY-MM-DD]` (optional, defaults to today)
+  - `maxPoints=[int]` (optional, defaults to 50)
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "type": "weight",
+      "unit": "kg",
+      "labels": ["2023-10-01", "2023-10-15", "2023-10-30"],
+      "values": [78.0, 76.5, 75.5],
+      "start_date": "2023-10-01T00:00:00Z",
+      "end_date": "2023-10-30T23:59:59Z"
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 400 Bad Request or 500 Internal Server Error
+
+### Get advanced metrics
+- **URL**: `/api/v1/user-biometrics/user/{userId}/advanced-metrics`
+- **Method**: `GET`
+- **URL Parameters**: `userId=[uint]`
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "bmi": 23.5,
+      "body_fat_percentage": 15.5,
+      "muscle_mass": 65.2,
+      "waist_to_hip_ratio": 0.85,
+      "body_water_percentage": 60.5,
+      "bmi_category": "Normal weight",
+      "body_fat_category": "Fitness",
+      "health_risk": "Low"
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 400 Bad Request or 500 Internal Server Error
+
+### Get biometric summary
+- **URL**: `/api/v1/user-biometrics/user/{userId}/summary`
+- **Method**: `GET`
+- **URL Parameters**: `userId=[uint]`
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "user_id": 1,
+      "latest_biometrics": {
+        "weight": {
+          "id": 15,
+          "user_id": 1,
+          "created_at": "2023-10-30T00:00:00Z",
+          "type": "weight",
+          "value": 75.5,
+          "unit": "kg"
+        },
+        "body_fat_percentage": {
+          "id": 16,
+          "user_id": 1,
+          "created_at": "2023-10-28T00:00:00Z",
+          "type": "body_fat_percentage",
+          "value": 15.5,
+          "unit": "%"
+        }
+      },
+      "progress_data": {
+        "weight": {
+          "type": "weight",
+          "unit": "kg",
+          "current_value": 75.5,
+          "previous_value": 78.0,
+          "overall_change": -2.5,
+          "percent_change": -3.21,
+          "trend": "down",
+          "data_points": [...],
+          "start_date": "2023-10-01T00:00:00Z",
+          "end_date": "2023-10-30T23:59:59Z"
+        }
+      },
+      "goals": {
+        "goals": [],
+        "overall_progress": 0,
+        "achieved_goals": 0,
+        "total_goals": 0
+      },
+      "last_updated": "2023-10-30T12:00:00Z"
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 400 Bad Request or 500 Internal Server Error
+
+### Get available biometric types for user
+- **URL**: `/api/v1/user-biometrics/user/{userId}/types`
+- **Method**: `GET`
+- **URL Parameters**: `userId=[uint]`
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "types": ["weight", "height", "body_fat_percentage", "muscle_mass"]
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 400 Bad Request or 500 Internal Server Error
+
+### Get all supported biometric types
+- **URL**: `/api/v1/user-biometrics/types`
+- **Method**: `GET`
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "Weight": "weight",
+      "Height": "height",
+      "BodyFatPercentage": "body_fat_percentage",
+      "MuscleMass": "muscle_mass",
+      "BMI": "bmi",
+      "WaistCircumference": "waist_circumference",
+      "HipCircumference": "hip_circumference",
+      "ChestCircumference": "chest_circumference",
+      "ArmCircumference": "arm_circumference",
+      "ThighCircumference": "thigh_circumference",
+      "BloodPressureSystolic": "blood_pressure_systolic",
+      "BloodPressureDiastolic": "blood_pressure_diastolic",
+      "RestingHeartRate": "resting_heart_rate",
+      "BodyWaterPercentage": "body_water_percentage",
+      "BoneDensity": "bone_density"
+    }
+    ```
+
 ## Dashboard Endpoints
 
 ### Get User Dashboard

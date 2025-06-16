@@ -196,4 +196,146 @@ func (c *UserBiometricController) DeleteUserBiometric(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "User biometric deleted successfully"})
-} 
+}
+
+// GetBiometricProgress retrieves progress data for a specific biometric type
+func (c *UserBiometricController) GetBiometricProgress(ctx *gin.Context) {
+	userIDStr := ctx.Param("userId")
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	biometricType := ctx.Param("type")
+	startDateStr := ctx.Query("startDate")
+	endDateStr := ctx.Query("endDate")
+
+	// Default to last 30 days if no dates provided
+	endDate := time.Now()
+	startDate := endDate.AddDate(0, 0, -30)
+
+	if startDateStr != "" {
+		if parsedStartDate, err := time.Parse("2006-01-02", startDateStr); err == nil {
+			startDate = parsedStartDate
+		}
+	}
+
+	if endDateStr != "" {
+		if parsedEndDate, err := time.Parse("2006-01-02", endDateStr); err == nil {
+			endDate = time.Date(parsedEndDate.Year(), parsedEndDate.Month(), parsedEndDate.Day(), 23, 59, 59, 999999999, parsedEndDate.Location())
+		}
+	}
+
+	progress, err := c.service.GetBiometricProgress(uint(userID), biometricType, startDate, endDate)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve biometric progress"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, progress)
+}
+
+// GetChartData retrieves data formatted for chart visualization
+func (c *UserBiometricController) GetChartData(ctx *gin.Context) {
+	userIDStr := ctx.Param("userId")
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	biometricType := ctx.Param("type")
+	startDateStr := ctx.Query("startDate")
+	endDateStr := ctx.Query("endDate")
+	maxPointsStr := ctx.DefaultQuery("maxPoints", "50")
+
+	maxPoints, err := strconv.Atoi(maxPointsStr)
+	if err != nil {
+		maxPoints = 50
+	}
+
+	// Default to last 30 days if no dates provided
+	endDate := time.Now()
+	startDate := endDate.AddDate(0, 0, -30)
+
+	if startDateStr != "" {
+		if parsedStartDate, err := time.Parse("2006-01-02", startDateStr); err == nil {
+			startDate = parsedStartDate
+		}
+	}
+
+	if endDateStr != "" {
+		if parsedEndDate, err := time.Parse("2006-01-02", endDateStr); err == nil {
+			endDate = time.Date(parsedEndDate.Year(), parsedEndDate.Month(), parsedEndDate.Day(), 23, 59, 59, 999999999, parsedEndDate.Location())
+		}
+	}
+
+	chartData, err := c.service.GetChartData(uint(userID), biometricType, startDate, endDate, maxPoints)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve chart data"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, chartData)
+}
+
+// GetAdvancedMetrics retrieves calculated advanced health metrics
+func (c *UserBiometricController) GetAdvancedMetrics(ctx *gin.Context) {
+	userIDStr := ctx.Param("userId")
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	metrics, err := c.service.GetAdvancedMetrics(uint(userID))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate advanced metrics"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, metrics)
+}
+
+// GetBiometricSummary retrieves a comprehensive summary of user's biometrics
+func (c *UserBiometricController) GetBiometricSummary(ctx *gin.Context) {
+	userIDStr := ctx.Param("userId")
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	summary, err := c.service.GetBiometricSummary(uint(userID))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve biometric summary"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, summary)
+}
+
+// GetAvailableBiometricTypes retrieves all biometric types available for a user
+func (c *UserBiometricController) GetAvailableBiometricTypes(ctx *gin.Context) {
+	userIDStr := ctx.Param("userId")
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	types, err := c.service.GetAvailableBiometricTypes(uint(userID))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve available biometric types"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"types": types})
+}
+
+// GetBiometricTypes retrieves all supported biometric types
+func (c *UserBiometricController) GetBiometricTypes(ctx *gin.Context) {
+	types := models.GetBiometricTypes()
+	ctx.JSON(http.StatusOK, types)
+}

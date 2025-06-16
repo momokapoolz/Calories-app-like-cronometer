@@ -104,8 +104,36 @@ func (s *JWTService) ValidateToken(tokenID string) (*jwt.Token, jwt.MapClaims, e
 	}
 
 	// Extract and validate claims
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return token, claims, nil
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		// Explicit expiration check
+		if exp, ok := claims["exp"].(float64); ok {
+			currentTime := time.Now().Unix()
+			expirationTime := int64(exp)
+
+			if currentTime > expirationTime {
+				// Token has expired, also remove it from Redis to clean up
+				DeleteToken(tokenID)
+				return nil, nil, fmt.Errorf("token has expired at %v (current time: %v)",
+					time.Unix(expirationTime, 0), time.Unix(currentTime, 0))
+			}
+		} else {
+			return nil, nil, errors.New("token missing expiration claim")
+		}
+
+		// Validate issued at time (optional security check)
+		if iat, ok := claims["iat"].(float64); ok {
+			issuedTime := int64(iat)
+			currentTime := time.Now().Unix()
+
+			// Reject tokens issued in the future (clock skew tolerance of 5 minutes)
+			if issuedTime > currentTime+300 {
+				return nil, nil, errors.New("token issued in the future")
+			}
+		}
+
+		if token.Valid {
+			return token, claims, nil
+		}
 	}
 
 	return nil, nil, errors.New("invalid token")

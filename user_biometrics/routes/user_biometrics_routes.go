@@ -24,5 +24,12 @@ func SetupUserBiometricRoutes(router *gin.RouterGroup, db *gorm.DB) {
 		userBiometricRoutes.GET("/user/:userId/type/:type/latest", userBiometricController.GetLatestUserBiometricByUserIDAndType)
 		userBiometricRoutes.PUT("/:id", userBiometricController.UpdateUserBiometric)
 		userBiometricRoutes.DELETE("/:id", userBiometricController.DeleteUserBiometric)
+
+		userBiometricRoutes.GET("/user/:userId/progress/:type", userBiometricController.GetBiometricProgress)
+		userBiometricRoutes.GET("/user/:userId/chart/:type", userBiometricController.GetChartData)
+		userBiometricRoutes.GET("/user/:userId/advanced-metrics", userBiometricController.GetAdvancedMetrics)
+		userBiometricRoutes.GET("/user/:userId/summary", userBiometricController.GetBiometricSummary)
+		userBiometricRoutes.GET("/user/:userId/types", userBiometricController.GetAvailableBiometricTypes)
+		userBiometricRoutes.GET("/types", userBiometricController.GetBiometricTypes)
 	}
-} 
+}
