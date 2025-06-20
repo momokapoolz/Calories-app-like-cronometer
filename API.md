@@ -1155,7 +1155,7 @@ All protected endpoints validate authentication credentials on every request.
           "overall_change": -2.5,
           "percent_change": -3.21,
           "trend": "down",
-          "data_points": [...],
+          "data_points": [],
           "start_date": "2023-10-01T00:00:00Z",
           "end_date": "2023-10-30T23:59:59Z"
         }
