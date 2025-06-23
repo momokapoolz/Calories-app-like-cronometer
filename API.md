@@ -487,6 +487,389 @@ All protected endpoints validate authentication credentials on every request.
 - **Error Response**: 
   - **Code**: 404 Not Found or 500 Internal Server Error
 
+## Nutrition Calculation Endpoints
+
+### Get Today's Nutrition Summary
+- **URL**: `/api/v1/nutrition/today`
+- **Method**: `GET`
+- **Authentication**: Required (`Authorization: Bearer` header with access_token_id)
+- **Description**: Returns comprehensive nutrition calculation for the authenticated user for today's date, including total calories, macro/micronutrient breakdown, and individual meal analysis.
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "user_id": 1,
+      "date_range": "2024-01-15",
+      "total_calories": 2150.5,
+      "MacroNutrientBreakDown": [
+        {
+          "energy": 2150.5,
+          "protein": 120.3,
+          "total_lipid_fe": 95.2,
+          "carbohydrate": 250.7,
+          "fiber": 35.1,
+          "cholesteroid": 45.2,
+          "vitamin_a": 850.3,
+          "vitamin_b": 12.5,
+          "calcium": 1200.0,
+          "iron": 18.5
+        }
+      ],
+      "MicroNutrientBreakDown": [
+        {
+          "nutrient_id": 11,
+          "nutrient_name": "Vitamin C",
+          "amount": 85.3,
+          "unit": "g"
+        },
+        {
+          "nutrient_id": 12,
+          "nutrient_name": "Magnesium",
+          "amount": 320.5,
+          "unit": "g"
+        }
+      ],
+      "MealBreakdown": [
+        {
+          "meal_log_id": 1,
+          "meal_type": "breakfast",
+          "date": "2024-01-15",
+          "calories": 450.2,
+          "protein": 25.1,
+          "carbohydrate": 60.3,
+          "fat": 18.7,
+          "food_count": 3
+        },
+        {
+          "meal_log_id": 2,
+          "meal_type": "lunch",
+          "date": "2024-01-15",
+          "calories": 750.8,
+          "protein": 45.2,
+          "carbohydrate": 90.4,
+          "fat": 35.1,
+          "food_count": 4
+        },
+        {
+          "meal_log_id": 3,
+          "meal_type": "dinner",
+          "date": "2024-01-15",
+          "calories": 949.5,
+          "protein": 50.0,
+          "carbohydrate": 100.0,
+          "fat": 41.4,
+          "food_count": 5
+        }
+      ]
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "error": "Failed to calculate nutrition"
+    }
+    ```
+
+### Get Nutrition Summary for Specific Date
+- **URL**: `/api/v1/nutrition/date/{date}`
+- **Method**: `GET`
+- **Authentication**: Required (`Authorization: Bearer` header with access_token_id)
+- **URL Parameters**: `date=[YYYY-MM-DD]` (e.g., 2024-01-15)
+- **Description**: Returns comprehensive nutrition calculation for the authenticated user for a specific date.
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: Same structure as today's nutrition summary, but `date_range` will show the specific date
+- **Error Response**: 
+  - **Code**: 400 Bad Request
+    ```json
+    {
+      "error": "Invalid date format. Use YYYY-MM-DD"
+    }
+    ```
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "error": "Failed to calculate nutrition"
+    }
+    ```
+
+### Get Nutrition Summary for Date Range
+- **URL**: `/api/v1/nutrition/range`
+- **Method**: `GET`
+- **Authentication**: Required (`Authorization: Bearer` header with access_token_id)
+- **Query Parameters**:
+  - `startDate=[YYYY-MM-DD]` (required)
+  - `endDate=[YYYY-MM-DD]` (required)
+- **Description**: Returns aggregated nutrition calculation for the authenticated user within a specified date range. All nutrition values are summed across all meals in the date range.
+- **Example**: `/api/v1/nutrition/range?startDate=2024-01-01&endDate=2024-01-31`
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "user_id": 1,
+      "date_range": "2024-01-01 to 2024-01-31",
+      "total_calories": 65250.5,
+      "MacroNutrientBreakDown": [
+        {
+          "energy": 65250.5,
+          "protein": 3650.3,
+          "total_lipid_fe": 2885.2,
+          "carbohydrate": 7620.7,
+          "fiber": 1085.1,
+          "cholesteroid": 1385.2,
+          "vitamin_a": 26350.3,
+          "vitamin_b": 385.5,
+          "calcium": 37200.0,
+          "iron": 573.5
+        }
+      ],
+      "MicroNutrientBreakDown": [
+        {
+          "nutrient_id": 11,
+          "nutrient_name": "Vitamin C",
+          "amount": 2630.3,
+          "unit": "g"
+        }
+      ],
+      "MealBreakdown": [
+        {
+          "meal_log_id": 1,
+          "meal_type": "breakfast",
+          "date": "2024-01-01",
+          "calories": 450.2,
+          "protein": 25.1,
+          "carbohydrate": 60.3,
+          "fat": 18.7,
+          "food_count": 3
+        },
+        {
+          "meal_log_id": 2,
+          "meal_type": "lunch",
+          "date": "2024-01-01",
+          "calories": 750.8,
+          "protein": 45.2,
+          "carbohydrate": 90.4,
+          "fat": 35.1,
+          "food_count": 4
+        }
+      ]
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 400 Bad Request
+    ```json
+    {
+      "error": "startDate and endDate are required"
+    }
+    ```
+  - **Code**: 400 Bad Request
+    ```json
+    {
+      "error": "Invalid startDate format. Use YYYY-MM-DD"
+    }
+    ```
+  - **Code**: 400 Bad Request
+    ```json
+    {
+      "error": "Invalid endDate format. Use YYYY-MM-DD"
+    }
+    ```
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "error": "Failed to calculate nutrition"
+    }
+    ```
+
+### Nutrition Calculation Features
+
+The nutrition calculation endpoints provide the following capabilities:
+
+1. **Comprehensive Macro and Micronutrient Analysis**: 
+   - Calculates total calories (energy)
+   - Breaks down macronutrients: protein, carbohydrates, fats, fiber
+   - Includes vitamins and minerals: Vitamin A, Vitamin B12, Calcium, Iron, etc.
+   - Provides micronutrient breakdown for all other nutrients not classified as macronutrients
+
+2. **Meal-Level Breakdown**: 
+   - Shows nutrition data for each individual meal
+   - Includes meal type (breakfast, lunch, dinner, snack)
+   - Provides food count per meal
+   - Shows calories and key macronutrients per meal
+
+3. **Flexible Date Ranges**: 
+   - Today's nutrition (current date)
+   - Specific date nutrition
+   - Date range nutrition (aggregated across multiple days)
+
+4. **Automatic Calculation**: 
+   - Based on actual food consumption from meal logs
+   - Uses nutrient data from the food_nutrients table
+   - Calculates based on actual quantity consumed (quantity_grams)
+   - Converts amounts per 100g to actual consumed amounts
+
+### Important Notes
+
+1. **Nutrient Data Requirements**: The calculation requires:
+   - Food items with associated nutrient data in the `food_nutrients` table
+   - Meal logs with items containing proper `quantity_grams` values
+   - Valid nutrient IDs that match the constants in the service
+
+2. **Authentication**: All nutrition endpoints require valid JWT authentication via the `Authorization: Bearer` header.
+
+3. **Data Accuracy**: Nutrition calculations are based on the nutrient data stored in your database. Ensure your `food_nutrients` table contains accurate `amount_per_100g` values for reliable calculations.
+
+4. **Performance**: For large date ranges with many meals, the calculation may take longer. Consider implementing caching for frequently requested data if needed.
+
+### Get Nutrition for Specific Meal
+- **URL**: `/api/v1/nutrition/meal/{mealLogId}`
+- **Method**: `GET`
+- **Authentication**: Required (`Authorization: Bearer` header with access_token_id)
+- **URL Parameters**: `mealLogId=[uint]` (ID of the meal log)
+- **Description**: Returns detailed nutrition calculation for a specific meal. Only the owner of the meal log can access this data.
+- **Success Response**: 
+  - **Code**: 200 OK
+  - **Content**: 
+    ```json
+    {
+      "meal_log_id": 123,
+      "user_id": 1,
+      "meal_type": "breakfast",
+      "date": "2024-01-15",
+      "total_calories": 450.2,
+      "food_count": 3,
+      "MacroNutrientBreakDown": [
+        {
+          "energy": 450.2,
+          "protein": 25.1,
+          "total_lipid_fe": 18.7,
+          "carbohydrate": 60.3,
+          "fiber": 8.2,
+          "cholesteroid": 15.3,
+          "vitamin_a": 125.4,
+          "vitamin_b": 2.1,
+          "calcium": 180.0,
+          "iron": 3.2
+        }
+      ],
+      "MicroNutrientBreakDown": [
+        {
+          "nutrient_id": 11,
+          "nutrient_name": "Vitamin C",
+          "amount": 25.3,
+          "unit": "g"
+        },
+        {
+          "nutrient_id": 12,
+          "nutrient_name": "Magnesium",
+          "amount": 85.7,
+          "unit": "g"
+        }
+      ]
+    }
+    ```
+- **Error Response**: 
+  - **Code**: 400 Bad Request
+    ```json
+    {
+      "error": "Invalid meal log ID format"
+    }
+    ```
+  - **Code**: 401 Unauthorized
+    ```json
+    {
+      "error": "Unauthorized"
+    }
+    ```
+  - **Code**: 403 Forbidden
+    ```json
+    {
+      "error": "Failed to calculate meal nutrition"
+    }
+    ```
+  - **Code**: 404 Not Found
+    ```json
+    {
+      "error": "Failed to calculate meal nutrition"
+    }
+    ```
+  - **Code**: 500 Internal Server Error
+    ```json
+    {
+      "error": "Failed to calculate meal nutrition"
+    }
+    ```
+
+### Individual Meal Nutrition Features
+
+The individual meal nutrition endpoint provides the following capabilities:
+
+1. **Detailed Meal Analysis**: 
+   - Shows nutrition breakdown for a specific meal log
+   - Includes total calories and food count
+   - Provides both macro and micronutrient details
+
+2. **User Authorization**: 
+   - Only the owner of the meal log can access the nutrition data
+   - Validates user permissions before calculating nutrition
+
+3. **Complete Nutrient Profile**: 
+   - Calculates nutrition based on actual food quantities consumed
+   - Provides the same level of detail as the aggregated nutrition endpoints
+   - Shows nutrition values converted from per-100g amounts to actual consumed amounts
+
+4. **Real-time Calculation**: 
+   - Nutrition is calculated in real-time based on current food nutrient data
+   - No cached values, ensuring accuracy with the latest nutrient information
+
+### Usage Examples
+
+**Get nutrition for a specific breakfast meal:**
+```
+GET /api/v1/nutrition/meal/123
+Authorization: Bearer your_access_token_id
+```
+
+**Use cases:**
+- Analyzing nutrition content of individual meals
+- Tracking nutrient distribution across different meal types
+- Detailed meal planning and analysis
+- Integration with meal logging interfaces for immediate feedback
+
+### Important Notes for Individual Meal Nutrition
+
+1. **Access Control**: Users can only access nutrition data for their own meal logs. Attempting to access another user's meal log will result in an error.
+
+2. **Data Dependencies**: The calculation requires:
+   - Valid meal log with associated meal log items
+   - Food items with nutrient data in the `food_nutrients` table
+   - Proper `quantity_grams` values in meal log items
+
+3. **Error Handling**: If a meal log doesn't exist, belongs to another user, or has calculation issues, appropriate error messages are returned.
+
+4. **Performance**: Individual meal calculations are fast as they process only one meal's worth of data.
+
 ## Food Nutrients Endpoints
 
 ### Create a new food nutrient

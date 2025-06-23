@@ -3,8 +3,10 @@ package controllers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/momokapoolz/caloriesapp/auth"
 	"github.com/momokapoolz/caloriesapp/nutrient/models"
 	"github.com/momokapoolz/caloriesapp/nutrient/services"
 )
@@ -114,4 +116,123 @@ func (c *NutrientController) DeleteNutrient(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Nutrient deleted successfully"})
+}
+
+// GetUserNutritionByDate returns nutrition calculation for a specific date
+func (c *NutrientController) GetUserNutritionByDate(ctx *gin.Context) {
+	// Get authenticated user
+	userClaims, ok := auth.GetCurrentUser(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Parse date from path parameter
+	dateStr := ctx.Param("date")
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Use YYYY-MM-DD"})
+		return
+	}
+
+	// Get nutrition summary
+	summary, err := c.service.CalculateUserNutritionByDate(userClaims.UserID, date)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate nutrition"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, summary)
+}
+
+// GetUserNutritionByDateRange returns nutrition calculation for a date range
+func (c *NutrientController) GetUserNutritionByDateRange(ctx *gin.Context) {
+	// Get authenticated user
+	userClaims, ok := auth.GetCurrentUser(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Parse query parameters
+	startDateStr := ctx.Query("startDate")
+	endDateStr := ctx.Query("endDate")
+
+	if startDateStr == "" || endDateStr == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "startDate and endDate are required"})
+		return
+	}
+
+	startDate, err := time.Parse("2006-01-02", startDateStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid startDate format. Use YYYY-MM-DD"})
+		return
+	}
+
+	endDate, err := time.Parse("2006-01-02", endDateStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid endDate format. Use YYYY-MM-DD"})
+		return
+	}
+
+	// Extend end date to include the full day
+	endDate = time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, endDate.Location())
+
+	// Get nutrition summary
+	summary, err := c.service.CalculateUserNutritionByDateRange(userClaims.UserID, startDate, endDate)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate nutrition"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, summary)
+}
+
+// GetUserCurrentNutrition returns nutrition calculation for today
+func (c *NutrientController) GetUserCurrentNutrition(ctx *gin.Context) {
+	// Get authenticated user
+	userClaims, ok := auth.GetCurrentUser(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Use today's date
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Get nutrition summary
+	summary, err := c.service.CalculateUserNutritionByDate(userClaims.UserID, today)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate nutrition"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, summary)
+}
+
+// GetMealNutrition returns nutrition calculation for a specific meal
+func (c *NutrientController) GetMealNutrition(ctx *gin.Context) {
+	// Get authenticated user
+	userClaims, ok := auth.GetCurrentUser(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Parse meal log ID from path parameter
+	mealLogIDStr := ctx.Param("mealLogId")
+	mealLogID, err := strconv.ParseUint(mealLogIDStr, 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid meal log ID format"})
+		return
+	}
+
+	// Calculate nutrition for the specific meal
+	mealNutrition, err := c.service.CalculateMealNutrition(uint(mealLogID), userClaims.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate meal nutrition"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, mealNutrition)
 }
