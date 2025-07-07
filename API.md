@@ -204,6 +204,216 @@ All protected endpoints validate authentication credentials on every request.
     ```
 - **Error Response (`401 Unauthorized`)**: `{"error": "Not authenticated"}`
 
+### Update User Profile
+- **URL**: `/api/v1/profile`
+- **Method**: `PUT`
+- **Authentication**: Required (`Authorization: Bearer` header with access_token_id)
+- **Description**: Allows authenticated users to update their own profile information. Only the authenticated user can update their own profile.
+- **Request Body**:
+  ```json
+  {
+    "name": "John Smith",
+    "age": 32,
+    "gender": "Male",
+    "weight": 75.0,
+    "height": 180.0,
+    "goal": "Muscle Gain",
+    "activity_level": "High"
+  }
+  ```
+  **Note**: All fields are optional. Only provide the fields you want to update.
+- **Success Response (Code `200 OK`)**:
+  - **Content**: 
+    ```json
+    {
+      "status": "success",
+      "message": "Profile updated successfully",
+      "data": {
+        "user": {
+          "id": 1,
+          "name": "John Smith",
+          "email": "john@example.com",
+          "age": 32,
+          "gender": "Male",
+          "weight": 75.0,
+          "height": 180.0,
+          "goal": "Muscle Gain",
+          "activity_level": "High",
+          "role": "user",
+          "created_at": "2023-09-22T10:30:45Z",
+          "updated_at": "2023-09-22T11:15:30Z"
+        }
+      }
+    }
+    ```
+- **Error Response**: 
+  - **Code `400 Bad Request`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Email already in use"
+    }
+    ```
+  - **Code `400 Bad Request`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Invalid request format",
+      "error": "validation error details"
+    }
+    ```
+  - **Code `401 Unauthorized`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Not authenticated"
+    }
+    ```
+  - **Code `500 Internal Server Error`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Failed to update profile"
+    }
+    ```
+
+### Change Password
+- **URL**: `/api/v1/password`
+- **Method**: `PUT`
+- **Authentication**: Required (`Authorization: Bearer` header with access_token_id)
+- **Description**: Allows authenticated users to change their password. Requires current password verification.
+- **Request Body**:
+  ```json
+  {
+    "current_password": "oldpassword123",
+    "new_password": "newpassword456"
+  }
+  ```
+- **Success Response (Code `200 OK`)**:
+  - **Content**: 
+    ```json
+    {
+      "status": "success",
+      "message": "Password changed successfully"
+    }
+    ```
+- **Error Response**: 
+  - **Code `400 Bad Request`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Invalid request format",
+      "error": "validation error details"
+    }
+    ```
+  - **Code `401 Unauthorized`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Current password is incorrect"
+    }
+    ```
+  - **Code `401 Unauthorized`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Not authenticated"
+    }
+    ```
+  - **Code `500 Internal Server Error`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Failed to change password"
+    }
+    ```
+
+### Delete Account
+- **URL**: `/api/v1/account`
+- **Method**: `DELETE`
+- **Authentication**: Required (`Authorization: Bearer` header with access_token_id)
+- **Description**: Allows authenticated users to delete their own account. This action is irreversible and will permanently remove all user data.
+- **Success Response (Code `200 OK`)**:
+  - **Content**: 
+    ```json
+    {
+      "status": "success",
+      "message": "Account deleted successfully"
+    }
+    ```
+- **Error Response**: 
+  - **Code `401 Unauthorized`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Not authenticated"
+    }
+    ```
+  - **Code `500 Internal Server Error`**: 
+    ```json
+    {
+      "status": "error",
+      "message": "Failed to delete account"
+    }
+    ```
+
+### User Self-Management Features
+
+The user self-management endpoints provide the following security features:
+
+1. **Authentication Required**: All endpoints require valid JWT authentication via the `Authorization: Bearer` header.
+
+2. **User Isolation**: Users can only access and modify their own data. The user ID is extracted from the JWT token to ensure proper authorization.
+
+3. **Input Validation**: All request data is validated using struct tags for proper format and required fields.
+
+4. **Password Security**: 
+   - Password changes require current password verification
+   - New passwords are securely hashed using bcrypt
+   - No passwords are returned in API responses
+
+5. **Email Uniqueness**: When updating profile, email uniqueness is validated to prevent conflicts.
+
+6. **Partial Updates**: Profile updates support partial updates - only send the fields you want to change.
+
+### Usage Examples
+
+**Update Profile Example:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/profile \
+  -H "Authorization: Bearer your_access_token_id" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Smith",
+    "weight": 75.0,
+    "goal": "Muscle Gain"
+  }'
+```
+
+**Change Password Example:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/password \
+  -H "Authorization: Bearer your_access_token_id" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "current_password": "oldpassword123",
+    "new_password": "newpassword456"
+  }'
+```
+
+**Delete Account Example:**
+```bash
+curl -X DELETE http://localhost:8080/api/v1/account \
+  -H "Authorization: Bearer your_access_token_id"
+```
+
+### Integration Notes
+
+- **Frontend Integration**: Use the `access_token_id` received from login as the Bearer token
+- **Error Handling**: All endpoints return consistent error response format with `status`, `message`, and optional `error` fields
+- **Data Validation**: Client-side validation should match server-side validation rules
+- **Security**: Always use HTTPS in production to protect JWT tokens and sensitive data
+
 ### Get Auth User Profile (Example)
 - **URL**: `/api/auth/profile`
 - **Method**: `GET`

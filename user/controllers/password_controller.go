@@ -5,21 +5,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/momokapoolz/caloriesapp/auth"
+	"github.com/momokapoolz/caloriesapp/dto"
 	"github.com/momokapoolz/caloriesapp/user/services"
 )
 
 type PasswordController struct {
 	passwordService *services.PasswordService
-}
-
-type UpdatePasswordRequest struct {
-	CurrentPassword string `json:"current_password" binding:"required"`
-	NewPassword     string `json:"new_password" binding:"required,min=6"`
-}
-
-type AdminUpdatePasswordRequest struct {
-	Email       string `json:"email" binding:"required,email"`
-	NewPassword string `json:"new_password" binding:"required,min=6"`
 }
 
 func NewPasswordController(passwordService *services.PasswordService) *PasswordController {
@@ -40,7 +31,7 @@ func (c *PasswordController) UpdatePassword(ctx *gin.Context) {
 		return
 	}
 
-	var req UpdatePasswordRequest
+	var req dto.UpdatePasswordRequestDTO
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
@@ -78,7 +69,7 @@ func (c *PasswordController) UpdatePassword(ctx *gin.Context) {
 
 // AdminUpdatePassword allows administrators to update any user's password
 func (c *PasswordController) AdminUpdatePassword(ctx *gin.Context) {
-	var req AdminUpdatePasswordRequest
+	var req dto.AdminUpdatePasswordRequestDTO
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
