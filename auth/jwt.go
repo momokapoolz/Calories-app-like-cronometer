@@ -112,7 +112,10 @@ func (s *JWTService) ValidateToken(tokenID string) (*jwt.Token, jwt.MapClaims, e
 
 			if currentTime > expirationTime {
 				// Token has expired, also remove it from Redis to clean up
-				DeleteToken(tokenID)
+				err := DeleteToken(tokenID)
+				if err != nil {
+					return nil, nil, err
+				}
 				return nil, nil, fmt.Errorf("token has expired at %v (current time: %v)",
 					time.Unix(expirationTime, 0), time.Unix(currentTime, 0))
 			}
