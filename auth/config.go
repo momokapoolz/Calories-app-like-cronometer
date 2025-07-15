@@ -23,8 +23,8 @@ func GetConfig() Config {
 
 	return Config{
 		SecretKey:     secretKey,
-		TokenExpiry:   time.Hour * 1,     // Access tokens valid for 1 hour
+		TokenExpiry:   time.Hour * 10,     // Access tokens valid for 10 hour
 		RefreshExpiry: time.Hour * 24 * 7, // Refresh tokens valid for 1 week
 		Issuer:        "caloriesapp",
 	}
-} 
+}

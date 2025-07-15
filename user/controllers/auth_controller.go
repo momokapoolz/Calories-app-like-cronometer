@@ -6,15 +6,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/momokapoolz/caloriesapp/auth"
+	"github.com/momokapoolz/caloriesapp/dto"
 	"github.com/momokapoolz/caloriesapp/user/repository"
 	"github.com/momokapoolz/caloriesapp/user/utils"
 )
-
-// LoginRequest represents the user login data
-type LoginRequest struct {
-	Email    string `json:"email" binding:"required"`
-	Password string `json:"password" binding:"required"`
-}
 
 // UserAuthController handles user authentication
 type UserAuthController struct {
@@ -32,7 +27,7 @@ func NewUserAuthController() *UserAuthController {
 
 // Login authenticates a user and returns JWT tokens
 func (c *UserAuthController) Login(ctx *gin.Context) {
-	var loginReq LoginRequest
+	var loginReq dto.LoginRequestDTO
 
 	// Bind and validate request body
 	if err := ctx.ShouldBindJSON(&loginReq); err != nil {
