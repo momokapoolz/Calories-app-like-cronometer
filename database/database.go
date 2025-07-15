@@ -40,46 +40,6 @@ func GetDBConfig() DBConfig {
 	}
 
 	return DBConfig{URL: url}
-
-	//local connection
-	//host := os.Getenv("DB_HOST")
-	//if host == "" {
-	//	host = "localhost"
-	//}
-	//
-	//port := os.Getenv("DB_PORT")
-	//if port == "" {
-	//	port = "5433"
-	//}
-	//
-	//user := os.Getenv("DB_USER")
-	//if user == "" {
-	//	user = "root"
-	//}
-	//
-	//password := os.Getenv("DB_PASSWORD")
-	//if password == "" {
-	//	log.Println("Warning: DB_PASSWORD not set in environment variables")
-	//}
-	//
-	//dbName := os.Getenv("DB_NAME")
-	//if dbName == "" {
-	//	dbName = "calorie_app_db"
-	//}
-	//
-	//sslMode := os.Getenv("DB_SSL_MODE")
-	//if sslMode == "" {
-	//	sslMode = "disable"
-	//}
-	//
-	//return DBConfig{
-	//	Host:     host,
-	//	Port:     port,
-	//	User:     user,
-	//	Password: password,
-	//	DBName:   dbName,
-	//	SSLMode:  sslMode,
-	//}
 }
 
 // ConnectDatabase initializes the database connection

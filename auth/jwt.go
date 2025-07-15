@@ -8,28 +8,24 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// JWTService provides methods for JWT token operations
 type JWTService struct {
 	config Config
 }
 
-// NewJWTService creates a new JWTService instance
-func NewJWTService() *JWTService {
-	return &JWTService{
-		config: GetConfig(),
-	}
-}
-
-// TokenPair represents a pair of JWT tokens (access and refresh)
 type TokenPair struct {
 	AccessTokenID  string `json:"access_token_id"`
 	RefreshTokenID string `json:"refresh_token_id"`
 	ExpiresIn      int64  `json:"expires_in"` // Seconds until access token expires
 }
 
+func NewJWTService() *JWTService {
+	return &JWTService{
+		config: GetConfig(),
+	}
+}
+
 // GenerateTokenPair creates a new access and refresh token pair
 func (s *JWTService) GenerateTokenPair(userID uint, email, role string) (TokenPair, error) {
-	// Create access token
 	accessTokenClaims := jwt.MapClaims{
 		"user_id": userID,
 		"email":   email,
@@ -46,7 +42,6 @@ func (s *JWTService) GenerateTokenPair(userID uint, email, role string) (TokenPa
 		return TokenPair{}, err
 	}
 
-	// Create refresh token with longer expiry
 	refreshTokenClaims := jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(s.config.RefreshExpiry).Unix(),
@@ -112,7 +107,10 @@ func (s *JWTService) ValidateToken(tokenID string) (*jwt.Token, jwt.MapClaims, e
 
 			if currentTime > expirationTime {
 				// Token has expired, also remove it from Redis to clean up
-				DeleteToken(tokenID)
+				err := DeleteToken(tokenID)
+				if err != nil {
+					return nil, nil, err
+				}
 				return nil, nil, fmt.Errorf("token has expired at %v (current time: %v)",
 					time.Unix(expirationTime, 0), time.Unix(currentTime, 0))
 			}
