@@ -12,12 +12,12 @@ import (
 	nutrientRepository "github.com/momokapoolz/caloriesapp/nutrient/repository"
 )
 
-// Nutrient IDs for macronutrients (these should match your database)
+// CaloriesNutrientID Nutrient IDs for macronutrients
 const (
-	CaloriesNutrientID     = 1 // Update with actual ID for calories
-	ProteinNutrientID      = 2 // Update with actual ID for protein
-	CarbohydrateNutrientID = 3 // Update with actual ID for carbohydrate
-	FatNutrientID          = 4 // Update with actual ID for fat
+	CaloriesNutrientID = 1
+	//ProteinNutrientID      = 2
+	//CarbohydrateNutrientID = 3
+	//FatNutrientID          = 4
 )
 
 // DashboardService handles business logic for dashboard operations
@@ -29,32 +29,32 @@ type DashboardService struct {
 	foodNutrientsRepo *foodNutrientsRepository.FoodNutrientRepository
 }
 
-// NewDashboardService creates a new dashboard service instance
+// NewDashboardService creates a new dashboard service instance: Constructor
 func NewDashboardService(
 	mealLogRepo *mealLogRepository.MealLogRepository,
 	mealLogItemsRepo *mealLogItemsRepository.MealLogItemRepository,
 	foodRepo *repository.FoodRepository,
 	nutrientRepo *nutrientRepository.NutrientRepository,
-	foodNutrientsRepo *foodNutrientsRepository.FoodNutrientRepository,
+	foodNutrientRepo *foodNutrientsRepository.FoodNutrientRepository,
 ) *DashboardService {
 	return &DashboardService{
 		mealLogRepo:       mealLogRepo,
 		mealLogItemsRepo:  mealLogItemsRepo,
 		foodRepo:          foodRepo,
 		nutrientRepo:      nutrientRepo,
-		foodNutrientsRepo: foodNutrientsRepo,
+		foodNutrientsRepo: foodNutrientRepo,
 	}
 }
 
 // GetUserDashboard retrieves dashboard data for a user on a specific date
 func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.DashboardResponseDTO, error) {
-	// Get all meal logs for the user on the specified date
+	//Get all meal logs for the user on the specific date
 	mealLogs, err := s.mealLogRepo.GetByUserIDAndDate(userID, date)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get meal logs: %w", err)
 	}
 
-	// Create the response DTO
+	//Create respone dto
 	dashboard := &dto.DashboardResponseDTO{
 		Date:                date.Format("2006-01-02"),
 		NumberOfMeals:       len(mealLogs),
@@ -64,7 +64,7 @@ func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.D
 
 	var totalCalories float64
 
-	// Process each meal log
+	//Process each meal log
 	for _, mealLog := range mealLogs {
 		mealLogSummary := dto.MealLogSummaryDTO{
 			ID:        mealLog.ID,
@@ -73,7 +73,6 @@ func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.D
 			FoodItems: []dto.FoodItemSummaryDTO{},
 		}
 
-		// Get meal log items for this meal log
 		items, err := s.mealLogItemsRepo.GetByMealLogID(mealLog.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get meal log items: %w", err)
@@ -81,21 +80,20 @@ func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.D
 
 		var mealCalories float64
 
-		// Process each meal log item
+		//Get meal log items for this meal log
 		for _, item := range items {
-			// Get food information
 			food, err := s.foodRepo.GetByID(item.FoodID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get food: %w", err)
 			}
 
-			// Calculate calories for this food item
+			//Calculate calories for this food item
 			calories, err := s.calculateCalories(item.FoodID, item.QuantityGrams)
 			if err != nil {
 				return nil, fmt.Errorf("failed to calculate calories: %w", err)
 			}
 
-			// Create food item summary
+			//Create food item summary
 			foodItem := dto.FoodItemSummaryDTO{
 				ID:            item.ID,
 				FoodID:        item.FoodID,
@@ -113,7 +111,7 @@ func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.D
 		dashboard.MealLogs = append(dashboard.MealLogs, mealLogSummary)
 		totalCalories += mealCalories
 
-		// Calculate macronutrients (optional)
+		// Calculate macronutrients
 		protein, carbs, fat, err := s.calculateMacronutrients(mealLog.ID)
 		if err == nil { // Only update if calculation succeeds
 			dashboard.TotalMacronutrients.Protein += protein
@@ -123,20 +121,18 @@ func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.D
 	}
 
 	dashboard.TotalCalories = totalCalories
-
 	return dashboard, nil
 }
 
 // calculateCalories calculates the calories for a specific food item and quantity
 func (s *DashboardService) calculateCalories(foodID uint, grams float64) (float64, error) {
-	// Get calorie nutrient for this food
 	foodNutrient, err := s.foodNutrientsRepo.GetByFoodIDAndNutrientID(foodID, CaloriesNutrientID)
 	if err != nil {
 		// If no specific calorie data is found, use a basic estimate (4 calories per gram)
 		return grams * 4, nil
 	}
 
-	// Calculate calories based on the amount per 100g and the actual grams consumed
+	//Calculate calories based on the amount per 100g and actual grams consumed
 	calories := (foodNutrient.AmountPer100g / 100) * grams
 	return calories, nil
 }
