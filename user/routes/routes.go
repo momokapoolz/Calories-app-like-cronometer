@@ -44,6 +44,7 @@ func SetupRoutes(rg *gin.RouterGroup) {
 	admin.Use(authMiddleware.RequireRole("admin"))
 	{
 		admin.POST("/user/password/update", passwordController.AdminUpdatePassword)
+
 	}
 
 	// Set up JWT auth routes and middleware
