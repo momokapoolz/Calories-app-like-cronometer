@@ -87,7 +87,7 @@ func (r *MealLogItemRepository) VerifyMealLogOwnership(mealLogID, userID uint) (
 	}
 
 	var mealLog MealLog
-	result := r.db.Table("meal_logs").Select("id", "user_id").Where("id = ?", mealLogID).First(&mealLog)
+	result := r.db.Table("meal_log").Select("id", "user_id").Where("id = ?", mealLogID).First(&mealLog)
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {

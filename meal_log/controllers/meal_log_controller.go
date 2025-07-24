@@ -215,22 +215,38 @@ func (c *MealLogController) UpdateMealLog(ctx *gin.Context) {
 		return
 	}
 
-	var mealLog models.MealLog
-	if err := ctx.ShouldBindJSON(&mealLog); err != nil {
+	// First, get the existing meal log to preserve created_at
+	existingMealLog, err := c.service.GetMealLogByID(uint(id))
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Meal log not found"})
+		return
+	}
+
+	// Check ownership
+	if existingMealLog.UserID != userID {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to update this meal log"})
+		return
+	}
+
+	// Create update request struct to only accept specific fields
+	var updateRequest struct {
+		MealType string `json:"meal_type"`
+	}
+	
+	if err := ctx.ShouldBindJSON(&updateRequest); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Gán ID và userID từ token
-	mealLog.ID = uint(id)
-	mealLog.UserID = userID
+	// Update only the meal_type, preserve other fields
+	existingMealLog.MealType = updateRequest.MealType
 
-	if err := c.service.UpdateMealLog(&mealLog); err != nil {
+	if err := c.service.UpdateMealLog(existingMealLog); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update meal log"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, mealLog)
+	ctx.JSON(http.StatusOK, existingMealLog)
 }
 
 // DeleteMealLog removes a meal log record

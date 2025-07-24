@@ -17,7 +17,7 @@ func SetupMealLogItemRoutes(router *gin.RouterGroup, db *gorm.DB) {
 
 	authMiddleware := auth.NewAuthMiddleware()
 
-	mealLogItemRoutes := router.Group("/meal-log-items")
+	mealLogItemRoutes := router.Group("/meal-log-items", authMiddleware.RequireAuth())
 	{
 		mealLogItemRoutes.POST("/", mealLogItemController.CreateMealLogItem)
 		mealLogItemRoutes.GET("/:id", mealLogItemController.GetMealLogItem)
@@ -28,7 +28,7 @@ func SetupMealLogItemRoutes(router *gin.RouterGroup, db *gorm.DB) {
 		mealLogItemRoutes.DELETE("/meal-log/:mealLogId", mealLogItemController.DeleteMealLogItemsByMealLogID)
 	}
 
-	// Add route for adding items to a meal log with authentication middleware
+	//Add route for adding items to a meal log with authentication middleware
 	mealLogRoutes := router.Group("/meal-logs", authMiddleware.RequireAuth())
 	{
 		mealLogRoutes.POST("/:id/items", mealLogItemController.AddItemsToMealLog)
