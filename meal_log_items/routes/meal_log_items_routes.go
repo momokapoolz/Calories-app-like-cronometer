@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/momokapoolz/caloriesapp/auth"
+	foodRepo "github.com/momokapoolz/caloriesapp/food/repository"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/controllers"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/repository"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/services"
@@ -12,7 +13,8 @@ import (
 // SetupMealLogItemRoutes initializes meal log item routes
 func SetupMealLogItemRoutes(router *gin.RouterGroup, db *gorm.DB) {
 	mealLogItemRepo := repository.NewMealLogItemRepository(db)
-	mealLogItemService := services.NewMealLogItemService(mealLogItemRepo)
+	foodRepository := foodRepo.NewFoodRepository(db)
+	mealLogItemService := services.NewMealLogItemService(mealLogItemRepo, foodRepository)
 	mealLogItemController := controllers.NewMealLogItemController(mealLogItemService)
 
 	authMiddleware := auth.NewAuthMiddleware()
