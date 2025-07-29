@@ -3,10 +3,12 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/momokapoolz/caloriesapp/auth"
 	"github.com/momokapoolz/caloriesapp/dto"
+	"github.com/momokapoolz/caloriesapp/user/models"
 	"github.com/momokapoolz/caloriesapp/user/repository"
 	"github.com/momokapoolz/caloriesapp/user/utils"
 )
@@ -134,6 +136,86 @@ func (c *UserAuthController) Logout(ctx *gin.Context) {
 	})
 }
 
+// Register creates a new user account and returns authentication tokens
+func (c *UserAuthController) Register(ctx *gin.Context) {
+	var registerReq dto.RegisterDTO
+
+	// Bind and validate request body
+	if err := ctx.ShouldBindJSON(&registerReq); err != nil {
+		log.Printf("[Register] Invalid request format: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"message": "Invalid request format",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	log.Printf("[Register] Attempting registration for email: %s", registerReq.Email)
+
+	// Check if user already exists
+	existingUser, err := c.userRepo.FindByEmail(registerReq.Email)
+	if err == nil && existingUser != nil {
+		log.Printf("[Register] Email already in use: %s", registerReq.Email)
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"message": "Email already in use",
+		})
+		return
+	}
+
+	// Hash password
+	hashedPassword, err := utils.HashPassword(registerReq.Password)
+	if err != nil {
+		log.Printf("[Register] Failed to hash password: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"message": "Failed to process registration",
+		})
+		return
+	}
+
+	// Create new user
+	user := &models.User{
+		Name:          registerReq.Name,
+		Email:         registerReq.Email,
+		PasswordHash:  hashedPassword,
+		Age:           registerReq.Age,
+		Gender:        registerReq.Gender,
+		Weight:        registerReq.Weight,
+		Height:        registerReq.Height,
+		Goal:          registerReq.Goal,
+		ActivityLevel: registerReq.ActivityLevel,
+		CreatedAt:     time.Now(),
+		Role:          "user", // Default role
+	}
+
+	// Save user to database
+	if err := c.userRepo.Create(user); err != nil {
+		log.Printf("[Register] Failed to create user: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"message": "Failed to create user account",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// Return success response with user data and tokens
+	ctx.JSON(http.StatusCreated, gin.H{
+		"status":  "success",
+		"message": "User registered successfully",
+		"data": gin.H{
+			"user": gin.H{
+				"id":    user.ID,
+				"name":  user.Name,
+				"email": user.Email,
+				"role":  user.Role,
+			},
+		},
+	})
+}
+
 // RegisterRoutes registers the auth routes
 func (c *UserAuthController) RegisterRoutes(router gin.IRouter) {
 	// Auth middleware for protected routes
@@ -141,6 +223,7 @@ func (c *UserAuthController) RegisterRoutes(router gin.IRouter) {
 
 	// Public routes
 	router.POST("/login", c.Login)
+	router.POST("/register", c.Register)
 
 	// Protected routes (require authentication)
 	router.POST("/logout", authMiddleware.RequireAuth(), c.Logout)
