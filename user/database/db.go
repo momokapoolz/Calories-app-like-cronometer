@@ -144,7 +144,10 @@ func ConnectDatabase() {
 	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Try to handle the existing users table
+	// Clear any existing prepared statements
+	clearPreparedStatements()
+
+	// Try to handle the existing User table
 	handleExistingTable()
 
 	// Auto migrate the models
@@ -159,14 +162,14 @@ func ConnectDatabase() {
 	fmt.Println("==================================")
 }
 
-// handleExistingTable attempts to handle existing users table
+// handleExistingTable attempts to handle existing User table
 func handleExistingTable() {
-	// Check if users table exists
+	// Check if User table exists (note: using 'User' not 'users')
 	var count int64
-	DB.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'users'").Count(&count)
+	DB.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'User'").Count(&count)
 
 	if count > 0 {
-		log.Println("Users table exists, dropping related constraints...")
+		log.Println("User table exists, dropping related constraints...")
 
 		// Get the list of constraints to drop
 		var constraints []struct {
@@ -178,7 +181,7 @@ func handleExistingTable() {
 			SELECT con.conname, cl.relname
 			FROM pg_constraint con
 			JOIN pg_class cl ON con.conrelid = cl.oid
-			WHERE cl.relname = 'users'
+			WHERE cl.relname = 'User'
 		`).Scan(&constraints)
 
 		// Drop each constraint
@@ -188,9 +191,37 @@ func handleExistingTable() {
 		}
 
 		// Try to drop indexes
-		log.Println("Dropping indexes on users table...")
-		DB.Exec("DROP INDEX IF EXISTS idx_users_email")
-		DB.Exec("DROP INDEX IF EXISTS users_email_key")
+		log.Println("Dropping indexes on User table...")
+		DB.Exec("DROP INDEX IF EXISTS idx_User_email")
+		DB.Exec("DROP INDEX IF EXISTS User_email_key")
 		DB.Exec("DROP INDEX IF EXISTS idx_email")
+	}
+}
+
+// clearPreparedStatements clears any existing prepared statements
+func clearPreparedStatements() {
+	if DB == nil {
+		log.Println("Database connection not established, skipping prepared statement cleanup")
+		return
+	}
+
+	log.Println("Clearing prepared statements...")
+
+	// Get all prepared statements and deallocate them
+	var statements []struct {
+		Name string `gorm:"column:name"`
+	}
+
+	result := DB.Raw("SELECT name FROM pg_prepared_statements").Scan(&statements)
+	if result.Error != nil {
+		log.Printf("Warning: Could not query prepared statements: %v", result.Error)
+		return
+	}
+
+	for _, stmt := range statements {
+		log.Printf("Deallocating prepared statement: %s", stmt.Name)
+		if err := DB.Exec(fmt.Sprintf("DEALLOCATE \"%s\"", stmt.Name)).Error; err != nil {
+			log.Printf("Warning: Could not deallocate prepared statement %s: %v", stmt.Name, err)
+		}
 	}
 }

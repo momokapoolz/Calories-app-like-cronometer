@@ -133,7 +133,7 @@ func ConnectDatabase() *gorm.DB {
 // handleExistingTables attempts to handle existing tables and their constraints
 func handleExistingTables() {
 	// List of tables to check
-	tables := []string{"food", "nutrient", "food_nutrient", "meal_log", "meal_log_item", "user_biometric"}
+	tables := []string{"food", "nutrient", "food_nutrient", "meal_log", "meal_log_item", "user_biometric", "User"}
 
 	for _, table := range tables {
 		// Check if table exists
