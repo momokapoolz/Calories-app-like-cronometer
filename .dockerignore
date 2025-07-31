@@ -1,0 +1,68 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+README.md
+API.md
+ESSENTIAL_API.md
+PROJECT_PROGRESS.md
+PROJECT.md
+TECHNICAL_DOCUMENTATION.md
+USER_CRUD_API.md
+UserAuth_API.md
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+main.exe
+main
+*.exe
+*.so
+*.dylib
+
+# Test files
+*_test.go
+*.test
+*test.json
+
+# Environment files (should be provided at runtime)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Dependencies (will be downloaded during build)
+vendor/
+
+# Temporary files
+tmp/
+temp/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker files
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Rules and documentation
+*.mdc
