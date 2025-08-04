@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/momokapoolz/caloriesapp/dto"
 	"time"
 
 	foodRepo "github.com/momokapoolz/caloriesapp/food/repository"
@@ -31,6 +32,42 @@ func NewMealLogService(repo *repository.MealLogRepository, mealLogItemsRepo *mea
 // CreateMealLog creates a new meal log record
 func (s *MealLogService) CreateMealLog(mealLog *models.MealLog) error {
 	return s.repo.Create(mealLog)
+}
+
+// CreateMealLogComprehensive Create a FULL Meal log
+func (s *MealLogService) CreateMealLogComprehensive(userID uint, req dto.CreateMealLogRequestDTO) (*models.MealLogWithItems, error) {
+	// Step 1: Create meal log
+	mealLog := models.MealLog{
+		UserID:    userID,
+		MealType:  req.MealType,
+		CreatedAt: time.Now(),
+	}
+
+	if err := s.CreateMealLog(&mealLog); err != nil {
+		return nil, err
+	}
+
+	// Step 2: Create meal log items
+	for _, item := range req.Items {
+		mealLogItem := mealLogItemsModels.MealLogItem{
+			MealLogID:     mealLog.ID,
+			FoodID:        item.FoodID,
+			Quantity:      item.Quantity,
+			QuantityGrams: item.QuantityGrams,
+		}
+
+		if err := s.CreateMealLogItem(&mealLogItem); err != nil {
+			return nil, err
+		}
+	}
+
+	// Step 3: Return meal log with items
+	mealLogWithItems, err := s.GetMealLogWithItemsByID(mealLog.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return mealLogWithItems, nil
 }
 
 // CreateMealLogItem creates a new meal log item with automatic quantity calculation

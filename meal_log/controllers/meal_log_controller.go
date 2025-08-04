@@ -10,9 +10,7 @@ import (
 	"github.com/momokapoolz/caloriesapp/dto"
 
 	"github.com/gin-gonic/gin"
-	"github.com/momokapoolz/caloriesapp/meal_log/models"
 	"github.com/momokapoolz/caloriesapp/meal_log/services"
-	mealLogItemsModels "github.com/momokapoolz/caloriesapp/meal_log_items/models"
 )
 
 // MealLogController handles HTTP requests for meal log operations
@@ -39,43 +37,13 @@ func (c *MealLogController) CreateMealLog(ctx *gin.Context) {
 		return
 	}
 
-	//Step 1: insert into meal log
-	mealLog := models.MealLog{
-		UserID:    userClaims.UserID,
-		MealType:  req.MealType,
-		CreatedAt: time.Now(),
-	}
-
-	err := c.service.CreateMealLog(&mealLog)
+	mealLogWithItems, err := c.service.CreateMealLogComprehensive(userClaims.UserID, req)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create meal log"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	//Step 2: insert into meal log item
-	for _, item := range req.Items {
-		mealLogItem := mealLogItemsModels.MealLogItem{
-			MealLogID:     mealLog.ID,
-			FoodID:        item.FoodID,
-			Quantity:      item.Quantity,
-			QuantityGrams: item.QuantityGrams,
-		}
-
-		err := c.service.CreateMealLogItem(&mealLogItem)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create meal log item"})
-			return
-		}
-	}
-
-	// Return the created meal log with items
-	mealLogWithItems, err := c.service.GetMealLogWithItemsByID(mealLog.ID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Created successfully but failed to retrieve"})
-		return
-	}
-
 	ctx.JSON(http.StatusCreated, mealLogWithItems)
+
 }
 
 // GetMealLog retrieves a meal log by its ID
@@ -232,7 +200,7 @@ func (c *MealLogController) UpdateMealLog(ctx *gin.Context) {
 	var updateRequest struct {
 		MealType string `json:"meal_type"`
 	}
-	
+
 	if err := ctx.ShouldBindJSON(&updateRequest); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
