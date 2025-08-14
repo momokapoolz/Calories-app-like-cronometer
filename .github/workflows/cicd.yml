@@ -1,0 +1,23 @@
+name: Deploy NutriTrack Backend
+
+on:
+  push:
+    branches:
+      - deploy-to-ec2
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout source
+        uses: action/checkout@v4
+      - name: create .env file
+        run: echo "PORT=${{secrets.PORT}}" >> .env
+      - name: login to dockerhub
+        run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+      - name: build docker image
+        run: docker build -t momokapool/nutritrack .
+      - name: push image to dockerhub
+        run: docker push momokapool/nutritrack:latest
+  deploy:
+    needs: build
+
