@@ -5,50 +5,38 @@ import (
 	"log"
 
 	"github.com/joho/godotenv"
-	"github.com/momokapoolz/caloriesapp/auth"
 	"github.com/momokapoolz/caloriesapp/database"
 	"github.com/momokapoolz/caloriesapp/routes"
 	user_database "github.com/momokapoolz/caloriesapp/user/database"
 	user_routes "github.com/momokapoolz/caloriesapp/user/routes"
 )
 
-//TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click
-// the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
-
 func main() {
-	//TIP <p>Press <shortcut actionId="ShowIntentionActions"/> when your caret is at the underlined text
-	// to see how GoLand suggests fixing the warning.</p><p>Alternatively, if available, click the lightbulb to view possible fixes.</p>
-
-	// Load .env file
+	// Load .env file (optional — app works without it using env var defaults)
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found or failed to load .env file")
+		log.Println("No .env file found, using environment variables")
 	}
 
-	// Initialize database connection to PostgreSQL
-	log.Println("Connecting to PostgreSQL database...")
+	// Open the single PostgreSQL connection and run all AutoMigrations.
+	// Both the main module and the user module share this connection.
+	log.Println("Connecting to PostgreSQL...")
 	db := database.ConnectDatabase()
-	user_database.ConnectDatabase() // For user module
 
-	// Initialize Redis connection
-	log.Println("Connecting to Redis...")
-	if err := auth.ConnectRedis(); err != nil {
-		log.Fatal("Failed to connect to Redis:", err)
-	}
+	// Bind the user module's DB variable to the shared connection.
+	// No second connection is opened.
+	user_database.ConnectDatabase()
 
-	// Set up API routes using Gin
+	// Register application routes
 	router := routes.SetupRoutes(db)
 
-	// Set up User routes (from existing module)
-	userRouter := router.Group("/api/v1")
-	user_routes.SetupRoutes(userRouter)
+	apiV1 := router.Group("/api/v1")
+	user_routes.SetupRoutes(apiV1)
 
-	// Start the Gin server
 	port := "8080"
-	log.Printf("Starting server on port %s...\n", port)
-	err := router.Run(":" + port)
-	if err != nil {
+	log.Printf("Starting server on :%s\n", port)
+	if err := router.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server: ", err)
 	}
 
-	fmt.Println("Calories App is running with PostgreSQL, Redis, and Gin!")
+	fmt.Println("Calories App is running!")
 }

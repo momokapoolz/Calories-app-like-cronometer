@@ -2,6 +2,7 @@ package dto
 
 type CreateMealLogRequestDTO struct {
 	MealType string           `json:"meal_type"`
+	Note     string           `json:"note"`
 	Items    []MealLogItemDTO `json:"items"`
 }
 

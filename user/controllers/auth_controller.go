@@ -13,218 +13,218 @@ import (
 	"github.com/momokapoolz/caloriesapp/user/utils"
 )
 
-// UserAuthController handles user authentication
+// UserAuthController handles authentication endpoints (login, register, logout, refresh)
 type UserAuthController struct {
 	userRepo   *repository.UserRepository
 	jwtService *auth.JWTService
+	config     auth.Config
 }
 
-// NewUserAuthController creates a new auth controller
+// NewUserAuthController creates a new UserAuthController
 func NewUserAuthController() *UserAuthController {
 	return &UserAuthController{
 		userRepo:   repository.NewUserRepository(),
 		jwtService: auth.NewJWTService(),
+		config:     auth.GetConfig(),
 	}
 }
 
-// Login authenticates a user and returns JWT tokens
-func (c *UserAuthController) Login(ctx *gin.Context) {
-	var loginReq dto.LoginRequestDTO
+// setTokenCookies writes the access and refresh JWTs as HttpOnly cookies.
+// SameSite=Strict prevents CSRF; Secure is driven by COOKIE_SECURE env var.
+func (c *UserAuthController) setTokenCookies(ctx *gin.Context, tokenPair auth.TokenPair) {
+	accessMaxAge := int(tokenPair.ExpiresIn)
+	refreshMaxAge := int(c.config.RefreshExpiry / time.Second)
 
-	// Bind and validate request body
-	if err := ctx.ShouldBindJSON(&loginReq); err != nil {
-		log.Printf("[Login] Invalid request format: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"status":  "error",
-			"message": "Invalid request format",
-			"error":   err.Error(),
-		})
-		return
-	}
-
-	log.Printf("[Login] Attempting login for email: %s", loginReq.Email)
-
-	// Find user by email
-	user, err := c.userRepo.FindByEmail(loginReq.Email)
-	if err != nil {
-		log.Printf("[Login] User not found: %v", err)
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "error",
-			"message": "Invalid credentials",
-		})
-		return
-	}
-
-	log.Printf("[Login] Found user: ID=%d, Email=%s", user.ID, user.Email)
-
-	// Compare password with stored hash using the utility function
-	err = utils.ComparePasswords(user.PasswordHash, loginReq.Password)
-	if err != nil {
-		log.Printf("[Login] Password comparison failed: %v", err)
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"status":  "error",
-			"message": "Invalid credentials",
-		})
-		return
-	}
-
-	log.Printf("[Login] Password verified successfully")
-
-	// Generate JWT token
-	tokenPair, err := c.jwtService.GenerateTokenPair(user.ID, user.Email, user.Role)
-	if err != nil {
-		log.Printf("[Login] Failed to generate token: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Failed to generate authentication token",
-		})
-		return
-	}
-
-	log.Printf("[Login] Generated token pair: AccessTokenID=%s, RefreshTokenID=%s", tokenPair.AccessTokenID, tokenPair.RefreshTokenID)
-
-	// Return tokens to client
-	ctx.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "Login successful",
-		"data": gin.H{
-			"user": gin.H{
-				"id":    user.ID,
-				"name":  user.Name,
-				"email": user.Email,
-				"role":  user.Role,
-			},
-			"tokens": tokenPair,
-		},
-	})
+	ctx.SetSameSite(http.SameSiteStrictMode)
+	ctx.SetCookie(auth.AccessTokenCookie, tokenPair.AccessToken,
+		accessMaxAge, "/", c.config.CookieDomain, c.config.CookieSecure, true)
+	ctx.SetCookie(auth.RefreshTokenCookie, tokenPair.RefreshToken,
+		refreshMaxAge, "/", c.config.CookieDomain, c.config.CookieSecure, true)
 }
 
-// Logout invalidates the current user's token
-func (c *UserAuthController) Logout(ctx *gin.Context) {
-	log.Printf("[Logout] Attempting logout")
-
-	// Get token ID from context (set by auth middleware)
-	tokenID, exists := ctx.Get("token_id")
-	if !exists {
-		log.Printf("[Logout] No token ID found in context")
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"status":  "error",
-			"message": "No active session",
-		})
-		return
-	}
-
-	log.Printf("[Logout] Token ID found: %s", tokenID.(string))
-
-	// Delete the token from Redis
-	err := auth.DeleteToken(tokenID.(string))
-	if err != nil {
-		log.Printf("[Logout] Failed to delete token: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Failed to invalidate token",
-		})
-		return
-	}
-
-	log.Printf("[Logout] Token successfully invalidated")
-
-	// Return success response
-	ctx.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"message": "Logged out successfully",
-	})
+// clearTokenCookies invalidates both auth cookies by setting MaxAge=-1
+func (c *UserAuthController) clearTokenCookies(ctx *gin.Context) {
+	ctx.SetSameSite(http.SameSiteStrictMode)
+	ctx.SetCookie(auth.AccessTokenCookie, "", -1, "/", c.config.CookieDomain, c.config.CookieSecure, true)
+	ctx.SetCookie(auth.RefreshTokenCookie, "", -1, "/", c.config.CookieDomain, c.config.CookieSecure, true)
 }
 
-// Register creates a new user account and returns authentication tokens
+// toAuthUserResponse converts a User model to the DTO used in auth responses
+func toAuthUserResponse(user *models.User) dto.UserResponseDTO {
+	return dto.UserResponseDTO{
+		ID:            user.ID,
+		Name:          user.Name,
+		Email:         user.Email,
+		Age:           user.Age,
+		Gender:        user.Gender,
+		Weight:        user.Weight,
+		Height:        user.Height,
+		Goal:          user.Goal,
+		ActivityLevel: user.ActivityLevel,
+		Role:          user.Role,
+		CreatedAt:     user.CreatedAt,
+	}
+}
+
+// Register creates a new user account.
+// Does NOT auto-login — the client should call POST /login after registration.
 func (c *UserAuthController) Register(ctx *gin.Context) {
-	var registerReq dto.RegisterDTO
-
-	// Bind and validate request body
-	if err := ctx.ShouldBindJSON(&registerReq); err != nil {
-		log.Printf("[Register] Invalid request format: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"status":  "error",
-			"message": "Invalid request format",
-			"error":   err.Error(),
+	var req dto.RegisterDTO
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Printf("[Register] Invalid request: %v", err)
+		ctx.JSON(http.StatusBadRequest, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Invalid request format",
 		})
 		return
 	}
 
-	log.Printf("[Register] Attempting registration for email: %s", registerReq.Email)
+	log.Printf("[Register] Registering email: %s", req.Email)
 
-	// Check if user already exists
-	existingUser, err := c.userRepo.FindByEmail(registerReq.Email)
-	if err == nil && existingUser != nil {
-		log.Printf("[Register] Email already in use: %s", registerReq.Email)
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"status":  "error",
-			"message": "Email already in use",
+	existing, err := c.userRepo.FindByEmail(req.Email)
+	if err == nil && existing != nil {
+		ctx.JSON(http.StatusConflict, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Email already in use",
 		})
 		return
 	}
 
-	// Hash password
-	hashedPassword, err := utils.HashPassword(registerReq.Password)
+	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		log.Printf("[Register] Failed to hash password: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Failed to process registration",
+		ctx.JSON(http.StatusInternalServerError, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Failed to process registration",
 		})
 		return
 	}
 
-	// Create new user
 	user := &models.User{
-		Name:          registerReq.Name,
-		Email:         registerReq.Email,
+		Name:          req.Name,
+		Email:         req.Email,
 		PasswordHash:  hashedPassword,
-		Age:           registerReq.Age,
-		Gender:        registerReq.Gender,
-		Weight:        registerReq.Weight,
-		Height:        registerReq.Height,
-		Goal:          registerReq.Goal,
-		ActivityLevel: registerReq.ActivityLevel,
+		Age:           req.Age,
+		Gender:        req.Gender,
+		Weight:        req.Weight,
+		Height:        req.Height,
+		Goal:          req.Goal,
+		ActivityLevel: req.ActivityLevel,
 		CreatedAt:     time.Now(),
-		Role:          "user", // Default role
+		Role:          "user",
 	}
 
-	// Save user to database
 	if err := c.userRepo.Create(user); err != nil {
 		log.Printf("[Register] Failed to create user: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Failed to create user account",
-			"error":   err.Error(),
+		ctx.JSON(http.StatusInternalServerError, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Failed to create user account",
 		})
 		return
 	}
 
-	// Return success response with user data and tokens
-	ctx.JSON(http.StatusCreated, gin.H{
-		"status":  "success",
-		"message": "User registered successfully",
-		"data": gin.H{
-			"user": gin.H{
-				"id":    user.ID,
-				"name":  user.Name,
-				"email": user.Email,
-				"role":  user.Role,
-			},
+	ctx.JSON(http.StatusCreated, dto.LoginResponseDTO{
+		Status:  "success",
+		Message: "User registered successfully",
+		Data: dto.AuthResponseDataDTO{
+			User: toAuthUserResponse(user),
 		},
 	})
 }
 
-// RegisterRoutes registers the auth routes
-func (c *UserAuthController) RegisterRoutes(router gin.IRouter) {
-	// Auth middleware for protected routes
-	authMiddleware := auth.NewAuthMiddleware()
+// Login authenticates a user and sets HttpOnly JWT cookies on success.
+// The response body contains user info and the access token expiry time.
+// The actual tokens are NOT in the response body — they are in cookies.
+func (c *UserAuthController) Login(ctx *gin.Context) {
+	var req dto.LoginRequestDTO
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Printf("[Login] Invalid request: %v", err)
+		ctx.JSON(http.StatusBadRequest, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Invalid request format",
+		})
+		return
+	}
 
-	// Public routes
-	router.POST("/login", c.Login)
-	router.POST("/register", c.Register)
+	log.Printf("[Login] Attempt for: %s", req.Email)
 
-	// Protected routes (require authentication)
-	router.POST("/logout", authMiddleware.RequireAuth(), c.Logout)
+	user, err := c.userRepo.FindByEmail(req.Email)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Invalid credentials",
+		})
+		return
+	}
+
+	if err := utils.ComparePasswords(user.PasswordHash, req.Password); err != nil {
+		log.Printf("[Login] Password mismatch for: %s", req.Email)
+		ctx.JSON(http.StatusUnauthorized, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Invalid credentials",
+		})
+		return
+	}
+
+	tokenPair, err := c.jwtService.GenerateTokenPair(user.ID, user.Email, user.Role)
+	if err != nil {
+		log.Printf("[Login] Token generation failed: %v", err)
+		ctx.JSON(http.StatusInternalServerError, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Failed to generate authentication token",
+		})
+		return
+	}
+
+	c.setTokenCookies(ctx, tokenPair)
+
+	ctx.JSON(http.StatusOK, dto.LoginResponseDTO{
+		Status:  "success",
+		Message: "Login successful",
+		Data: dto.AuthResponseDataDTO{
+			User:      toAuthUserResponse(user),
+			ExpiresIn: tokenPair.ExpiresIn,
+		},
+	})
+}
+
+// Logout clears both auth cookies, effectively ending the session.
+// No server-side token store to clean up — the JWT simply becomes unused.
+func (c *UserAuthController) Logout(ctx *gin.Context) {
+	c.clearTokenCookies(ctx)
+	ctx.JSON(http.StatusOK, dto.LoginResponseDTO{
+		Status:  "success",
+		Message: "Logged out successfully",
+	})
+}
+
+// Refresh reads the refresh_token cookie, validates it, and issues a new token pair.
+// The new access_token and refresh_token cookies replace the old ones.
+func (c *UserAuthController) Refresh(ctx *gin.Context) {
+	refreshToken, err := ctx.Cookie(auth.RefreshTokenCookie)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Refresh token not found",
+		})
+		return
+	}
+
+	tokenPair, err := c.jwtService.RefreshAccessToken(refreshToken)
+	if err != nil {
+		log.Printf("[Refresh] Invalid refresh token: %v", err)
+		ctx.JSON(http.StatusUnauthorized, dto.LoginResponseDTO{
+			Status:  "error",
+			Message: "Invalid or expired refresh token",
+		})
+		return
+	}
+
+	c.setTokenCookies(ctx, tokenPair)
+
+	ctx.JSON(http.StatusOK, dto.LoginResponseDTO{
+		Status:  "success",
+		Message: "Token refreshed successfully",
+		Data:    gin.H{"expires_in": tokenPair.ExpiresIn},
+	})
 }

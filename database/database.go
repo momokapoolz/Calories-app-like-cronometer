@@ -11,6 +11,7 @@ import (
 	meal_log_models "github.com/momokapoolz/caloriesapp/meal_log/models"
 	meal_log_items_models "github.com/momokapoolz/caloriesapp/meal_log_items/models"
 	nutrient_models "github.com/momokapoolz/caloriesapp/nutrient/models"
+	user_models "github.com/momokapoolz/caloriesapp/user/models"
 	user_biometrics_models "github.com/momokapoolz/caloriesapp/user_biometrics/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -39,7 +40,14 @@ func GetDBConfig() DBConfig {
 		return DBConfig{URL: url}
 	}
 
-	return DBConfig{URL: url}
+	return DBConfig{
+		Host:     os.Getenv("DB_HOST"),
+		Port:     os.Getenv("DB_PORT"),
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		DBName:   os.Getenv("DB_NAME"),
+		SSLMode:  os.Getenv("DB_SSLMODE"),
+	}
 }
 
 // ConnectDatabase initializes the database connection
@@ -47,6 +55,7 @@ func ConnectDatabase() *gorm.DB {
 	var err error
 
 	config := GetDBConfig()
+	log.Printf("Loaded config: %+v\n", config)
 
 	// Construct DSN string from config
 	var dsn string
@@ -110,8 +119,9 @@ func ConnectDatabase() *gorm.DB {
 	// Handle existing tables if needed
 	handleExistingTables()
 
-	// Auto migrate the schema
+	// Auto migrate all models in one place — single source of truth for schema
 	err = DB.AutoMigrate(
+		&user_models.User{},
 		&models.Food{},
 		&nutrient_models.Nutrient{},
 		&food_nutrients_models.FoodNutrient{},

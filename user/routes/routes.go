@@ -9,44 +9,42 @@ import (
 	"github.com/momokapoolz/caloriesapp/user/services"
 )
 
-// SetupRoutes configures all user API routes on the provided router group
+// SetupRoutes configures all user-module API routes on the provided router group.
+// A single AuthMiddleware instance is created here and shared across all sub-routers
+// to avoid redundant instantiation.
 func SetupRoutes(rg *gin.RouterGroup) {
-	// Apply middleware specific to user routes if needed
 	rg.Use(middleware.LoggingMiddleware())
 	rg.Use(auth.CORSMiddleware())
 
-	// Set up repositories and services
+	// Single shared instance — prevents creating multiple JWTService objects
+	authMiddleware := auth.NewAuthMiddleware()
+
+	// Shared dependencies
 	userRepo := repository.NewUserRepository()
 	passwordService := services.NewPasswordService(userRepo)
 
-	// Set up controllers
+	// Controllers
 	userController := controllers.NewUserController()
-	authController := controllers.NewUserAuthController()
 	passwordController := controllers.NewPasswordController(passwordService)
 
-	// Register basic routes
-	userController.RegisterRoutes(rg)
-	authController.RegisterRoutes(rg)
+	// Auth routes: POST /login, /register, /refresh, /logout
+	SetupAuthRoutes(rg, authMiddleware)
 
-	// Protected routes
-	authMiddleware := auth.NewAuthMiddleware()
+	// User profile routes: GET /profile, PUT /profile, DELETE /account
+	userController.RegisterRoutes(rg, authMiddleware)
 
-	// User routes that require authentication
-	protected := rg.Group("/user")
-	protected.Use(authMiddleware.RequireAuth())
+	// Password update (for authenticated users)
+	userProtected := rg.Group("/user")
+	userProtected.Use(authMiddleware.RequireAuth())
 	{
-		protected.POST("/password/update", passwordController.UpdatePassword)
+		userProtected.POST("/password/update", passwordController.UpdatePassword)
 	}
 
-	// Admin routes
+	// Admin-only routes
 	admin := rg.Group("/admin")
 	admin.Use(authMiddleware.RequireAuth())
 	admin.Use(authMiddleware.RequireRole("admin"))
 	{
 		admin.POST("/user/password/update", passwordController.AdminUpdatePassword)
-
 	}
-
-	// Set up JWT auth routes and middleware
-	//auth.SetupAuth(rg, userRepo)
 }

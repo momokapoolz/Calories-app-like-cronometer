@@ -40,6 +40,7 @@ func (s *MealLogService) CreateMealLogComprehensive(userID uint, req dto.CreateM
 	mealLog := models.MealLog{
 		UserID:    userID,
 		MealType:  req.MealType,
+		Note:      req.Note,
 		CreatedAt: time.Now(),
 	}
 

@@ -1,21 +1,15 @@
 package dto
 
-// LoginResponseDTO represents the response for both token-based and cookie-based auth
+// LoginResponseDTO is the standard response envelope for all auth endpoints
 type LoginResponseDTO struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
-// TokenResponseDTO represents the response for token-based authentication
-type TokenResponseDTO struct {
-	User      interface{} `json:"user"`
-	Token     string      `json:"token"`
-	ExpiresIn int64       `json:"expires_in"`
+// AuthResponseDataDTO is the data payload inside a successful login/register/refresh response.
+// Tokens are not included here — they are sent as HttpOnly cookies by the server.
+type AuthResponseDataDTO struct {
+	User      UserResponseDTO `json:"user"`
+	ExpiresIn int64           `json:"expires_in"` // seconds until access token expires
 }
-
-// CookieResponseDTO represents the response for cookie-based authentication
-type CookieResponseDTO struct {
-	User      interface{} `json:"user"`
-	ExpiresIn int64       `json:"expires_in"`
-} 
