@@ -1,0 +1,104 @@
+basePath: /api/v1
+definitions:
+  dto.DashboardResponseDTO:
+    properties:
+      date:
+        type: string
+      meal_logs:
+        items:
+          $ref: '#/definitions/dto.MealLogSummaryDTO'
+        type: array
+      number_of_meals:
+        type: integer
+      total_calories:
+        type: number
+      total_macronutrients:
+        $ref: '#/definitions/dto.MacronutrientsDTO'
+    type: object
+  dto.FoodItemSummaryDTO:
+    properties:
+      calories:
+        type: number
+      food_id:
+        type: integer
+      food_name:
+        type: string
+      id:
+        type: integer
+      quantity:
+        type: integer
+      quantity_grams:
+        type: number
+    type: object
+  dto.MacronutrientsDTO:
+    properties:
+      carbohydrate:
+        type: number
+      fat:
+        type: number
+      protein:
+        type: number
+    type: object
+  dto.MealLogSummaryDTO:
+    properties:
+      created_at:
+        type: string
+      food_items:
+        items:
+          $ref: '#/definitions/dto.FoodItemSummaryDTO'
+        type: array
+      id:
+        type: integer
+      meal_type:
+        type: string
+      total_calories:
+        type: number
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API documentation
+  title: My API Swagger
+  version: "1.0"
+paths:
+  /dashboard:
+    get:
+      consumes:
+      - application/json
+      description: Get calorie summary and nutrition data for a specific date
+      parameters:
+      - description: 'Date in YYYY-MM-DD format (default: today)'
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DashboardResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user dashboard
+      tags:
+      - dashboard
+swagger: "2.0"

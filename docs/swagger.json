@@ -1,0 +1,161 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API documentation",
+        "title": "My API Swagger",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get calorie summary and nutrition data for a specific date",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "Get user dashboard",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Date in YYYY-MM-DD format (default: today)",
+                        "name": "date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.DashboardResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.DashboardResponseDTO": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "meal_logs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.MealLogSummaryDTO"
+                    }
+                },
+                "number_of_meals": {
+                    "type": "integer"
+                },
+                "total_calories": {
+                    "type": "number"
+                },
+                "total_macronutrients": {
+                    "$ref": "#/definitions/dto.MacronutrientsDTO"
+                }
+            }
+        },
+        "dto.FoodItemSummaryDTO": {
+            "type": "object",
+            "properties": {
+                "calories": {
+                    "type": "number"
+                },
+                "food_id": {
+                    "type": "integer"
+                },
+                "food_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "quantity_grams": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.MacronutrientsDTO": {
+            "type": "object",
+            "properties": {
+                "carbohydrate": {
+                    "type": "number"
+                },
+                "fat": {
+                    "type": "number"
+                },
+                "protein": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.MealLogSummaryDTO": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "food_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.FoodItemSummaryDTO"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "meal_type": {
+                    "type": "string"
+                },
+                "total_calories": {
+                    "type": "number"
+                }
+            }
+        }
+    }
+}

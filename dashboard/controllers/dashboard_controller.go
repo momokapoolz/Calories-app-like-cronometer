@@ -16,6 +16,19 @@ func NewDashboardController(service *services.DashboardService) *DashboardContro
 	return &DashboardController{service: service}
 }
 
+// GetUserDashboard godoc
+// @Summary      Get user dashboard
+// @Description  Get calorie summary and nutrition data for a specific date
+// @Tags         dashboard
+// @Accept       json
+// @Produce      json
+// @Param        date  query     string  false  "Date in YYYY-MM-DD format (default: today)"
+// @Success      200   {object}  dto.DashboardResponseDTO
+// @Failure      400   {object}  map[string]string
+// @Failure      401   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /dashboard [get]
 func (c *DashboardController) GetUserDashboard(ctx *gin.Context) {
 	//Get current user from JWT token
 	userClaims, ok := auth.GetCurrentUser(ctx)

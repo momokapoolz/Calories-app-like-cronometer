@@ -12,7 +12,7 @@ type JWTService struct {
 	config Config
 }
 
-// TokenPair holds signed JWT strings returned after successful login
+// TokenPair JWT tokens returned after successful login (Access and Refresh)
 type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -24,8 +24,7 @@ func NewJWTService() *JWTService {
 }
 
 // GenerateTokenPair creates a signed access + refresh token pair.
-// Both tokens are returned as strings and stored in HttpOnly cookies by the caller —
-// no server-side token store (Redis) is needed.
+// Both tokens are returned as strings and stored in HttpOnly cookies by the caller
 func (s *JWTService) GenerateTokenPair(userID uint, email, role string) (TokenPair, error) {
 	now := time.Now()
 

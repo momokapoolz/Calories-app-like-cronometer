@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Config holds all JWT and cookie configuration
+// Config JWT and cookie configuration
 type Config struct {
 	SecretKey     string
 	TokenExpiry   time.Duration
@@ -22,13 +22,13 @@ func GetConfig() Config {
 		secretKey = "your-secret-key-change-in-production"
 	}
 
-	// Set COOKIE_SECURE=true in production; default false for local HTTP dev
+	// Set COOKIE_SECURE=true in production; default false for local HTTP development
 	secure := os.Getenv("COOKIE_SECURE") == "true"
 	domain := os.Getenv("COOKIE_DOMAIN")
 
 	return Config{
 		SecretKey:     secretKey,
-		TokenExpiry:   time.Minute * 15,   // Access token: 15 minutes (industry standard)
+		TokenExpiry:   time.Minute * 15,   // Access token: 15 minutes
 		RefreshExpiry: time.Hour * 24 * 7, // Refresh token: 7 days
 		Issuer:        "caloriesapp",
 		CookieSecure:  secure,
