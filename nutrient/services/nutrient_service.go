@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"github.com/momokapoolz/caloriesapp/helpers"
 	"time"
 
 	"github.com/momokapoolz/caloriesapp/dto"
@@ -78,6 +79,7 @@ func (s *NutrientService) DeleteNutrient(id uint) error {
 func (s *NutrientService) CalculateUserNutritionByDateRange(userID uint, startDate, endDate time.Time) (*dto.NutritionSummaryDTO, error) {
 	mealLogs, err := s.mealLogRepo.GetByUserIDAndDateRange(userID, startDate, endDate)
 	if err != nil {
+		helpers.LogError(err)
 		return nil, fmt.Errorf("failed to get meal logs: %w", err)
 	}
 
@@ -150,7 +152,7 @@ func (s *NutrientService) CalculateUserNutritionByDateRange(userID uint, startDa
 			NutrientID:   nutrientID,
 			NutrientName: nutrient.Name,
 			Amount:       amount,
-			Unit:         "g", // You might want to store unit in nutrient table
+			Unit:         nutrient.Unit,
 		})
 	}
 
@@ -162,6 +164,7 @@ func (s *NutrientService) CalculateUserNutritionByDate(userID uint, date time.Ti
 	endDate := date.Add(24 * time.Hour)
 	summary, err := s.CalculateUserNutritionByDateRange(userID, date, endDate)
 	if err != nil {
+		helpers.LogError(err)
 		return nil, err
 	}
 	summary.DateRange = date.Format("2006-01-02")
@@ -173,6 +176,7 @@ func (s *NutrientService) calculateMealNutrition(mealLogID uint) (map[uint]float
 	// Get all meal log items for this meal
 	items, err := s.mealLogItemsRepo.GetByMealLogID(mealLogID)
 	if err != nil {
+		helpers.LogError(err)
 		return nil, 0, fmt.Errorf("failed to get meal log items: %w", err)
 	}
 
@@ -227,6 +231,7 @@ func (s *NutrientService) CalculateMealNutrition(mealLogID uint, userID uint) (*
 	// Calculate nutrition for this meal
 	mealNutrients, foodCount, err := s.calculateMealNutrition(mealLogID)
 	if err != nil {
+		helpers.LogError(err)
 		return nil, fmt.Errorf("failed to calculate meal nutrition: %w", err)
 	}
 
@@ -273,7 +278,7 @@ func (s *NutrientService) CalculateMealNutrition(mealLogID uint, userID uint) (*
 			NutrientID:   nutrientID,
 			NutrientName: nutrient.Name,
 			Amount:       amount,
-			Unit:         "g", // You might want to store unit in nutrient table
+			Unit:         nutrient.Unit,
 		})
 	}
 

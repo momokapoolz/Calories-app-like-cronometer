@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/momokapoolz/caloriesapp/auth"
+	"github.com/momokapoolz/caloriesapp/helpers"
 	"github.com/momokapoolz/caloriesapp/nutrient/models"
 	"github.com/momokapoolz/caloriesapp/nutrient/services"
 )
@@ -20,7 +21,18 @@ func NewNutrientController(service *services.NutrientService) *NutrientControlle
 	return &NutrientController{service: service}
 }
 
-// CreateNutrient handles the creation of a new nutrient record
+// CreateNutrient godoc
+// @Summary      Create nutrient
+// @Description  Create a new nutrient record
+// @Tags         nutrient
+// @Accept       json
+// @Produce      json
+// @Param        nutrient  body      models.Nutrient  true  "Nutrient data"
+// @Success      201  {object}  models.Nutrient    "Nutrient created successfully"
+// @Failure      400  {object}  map[string]string  "Invalid request body"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrients/ [post]
 func (c *NutrientController) CreateNutrient(ctx *gin.Context) {
 	var nutrient models.Nutrient
 	if err := ctx.ShouldBindJSON(&nutrient); err != nil {
@@ -29,6 +41,7 @@ func (c *NutrientController) CreateNutrient(ctx *gin.Context) {
 	}
 
 	if err := c.service.CreateNutrient(&nutrient); err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create nutrient"})
 		return
 	}
@@ -36,7 +49,18 @@ func (c *NutrientController) CreateNutrient(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, nutrient)
 }
 
-// GetNutrient retrieves a nutrient by its ID
+// GetNutrient godoc
+// @Summary      Get a nutrient by ID
+// @Description  Retrieve a specific nutrient record by its ID
+// @Tags         nutrient
+// @Produce      json
+// @Param        id  path      int  true  "Nutrient ID"
+// @Success      200  {object}  models.Nutrient    "Nutrient retrieved successfully"
+// @Failure      400  {object}  map[string]string  "Invalid ID format"
+// @Failure      404  {object}  map[string]string  "Nutrient not found"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrients/{id} [get]
 func (c *NutrientController) GetNutrient(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -54,10 +78,19 @@ func (c *NutrientController) GetNutrient(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, nutrient)
 }
 
-// GetAllNutrients retrieves all nutrient records
+// GetAllNutrients godoc
+// @Summary      Get all nutrients
+// @Description  Retrieve all nutrient records
+// @Tags         nutrient
+// @Produce      json
+// @Success      200  {array}   models.Nutrient    "List of nutrients"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrients/ [get]
 func (c *NutrientController) GetAllNutrients(ctx *gin.Context) {
 	nutrients, err := c.service.GetAllNutrients()
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve nutrients"})
 		return
 	}
@@ -65,11 +98,21 @@ func (c *NutrientController) GetAllNutrients(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, nutrients)
 }
 
-// GetNutrientsByCategory retrieves nutrients by category
+// GetNutrientsByCategory godoc
+// @Summary      Get nutrients by category
+// @Description  Retrieve all nutrients belonging to a specific category
+// @Tags         nutrient
+// @Produce      json
+// @Param        category  path      string  true  "Nutrient category"
+// @Success      200  {array}   models.Nutrient    "List of nutrients in the category"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrients/category/{category} [get]
 func (c *NutrientController) GetNutrientsByCategory(ctx *gin.Context) {
 	category := ctx.Param("category")
 	nutrients, err := c.service.GetNutrientsByCategory(category)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve nutrients by category"})
 		return
 	}
@@ -77,7 +120,19 @@ func (c *NutrientController) GetNutrientsByCategory(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, nutrients)
 }
 
-// UpdateNutrient updates a nutrient record
+// UpdateNutrient godoc
+// @Summary      Update nutrient
+// @Description  Update an existing nutrient record by ID
+// @Tags         nutrient
+// @Accept       json
+// @Produce      json
+// @Param        id        path  int             true  "Nutrient ID"
+// @Param        nutrient  body  models.Nutrient true  "Updated nutrient data"
+// @Success      200  {object}  models.Nutrient    "Nutrient updated successfully"
+// @Failure      400  {object}  map[string]string  "Invalid ID or request body"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrients/{id} [put]
 func (c *NutrientController) UpdateNutrient(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -94,6 +149,7 @@ func (c *NutrientController) UpdateNutrient(ctx *gin.Context) {
 
 	nutrient.ID = uint(id)
 	if err := c.service.UpdateNutrient(&nutrient); err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update nutrient"})
 		return
 	}
@@ -101,7 +157,17 @@ func (c *NutrientController) UpdateNutrient(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, nutrient)
 }
 
-// DeleteNutrient removes a nutrient record
+// DeleteNutrient godoc
+// @Summary      Delete nutrient
+// @Description  Delete a nutrient record by ID
+// @Tags         nutrient
+// @Produce      json
+// @Param        id  path  int  true  "Nutrient ID"
+// @Success      200  {object}  map[string]string  "Nutrient deleted successfully"
+// @Failure      400  {object}  map[string]string  "Invalid ID format"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrients/{id} [delete]
 func (c *NutrientController) DeleteNutrient(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -111,6 +177,7 @@ func (c *NutrientController) DeleteNutrient(ctx *gin.Context) {
 	}
 
 	if err := c.service.DeleteNutrient(uint(id)); err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete nutrient"})
 		return
 	}
@@ -118,7 +185,18 @@ func (c *NutrientController) DeleteNutrient(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Nutrient deleted successfully"})
 }
 
-// GetUserNutritionByDate returns nutrition calculation for a specific date
+// GetUserNutritionByDate godoc
+// @Summary      Get user nutrition by date
+// @Description  Calculate and retrieve the authenticated user's total nutrition intake for a specific date
+// @Tags         nutrient
+// @Produce      json
+// @Param        date  path  string  true  "Date in YYYY-MM-DD format"
+// @Success      200  {object}  map[string]interface{}  "Nutrition summary for the date"
+// @Failure      400  {object}  map[string]string       "Invalid date format"
+// @Failure      401  {object}  map[string]string       "Unauthorized"
+// @Failure      500  {object}  map[string]string       "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrition/date/{date} [get]
 func (c *NutrientController) GetUserNutritionByDate(ctx *gin.Context) {
 	// Get authenticated user
 	userClaims, ok := auth.GetCurrentUser(ctx)
@@ -138,6 +216,7 @@ func (c *NutrientController) GetUserNutritionByDate(ctx *gin.Context) {
 	// Get nutrition summary
 	summary, err := c.service.CalculateUserNutritionByDate(userClaims.UserID, date)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate nutrition"})
 		return
 	}
@@ -145,7 +224,19 @@ func (c *NutrientController) GetUserNutritionByDate(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, summary)
 }
 
-// GetUserNutritionByDateRange returns nutrition calculation for a date range
+// GetUserNutritionByDateRange godoc
+// @Summary      Get user nutrition by date range
+// @Description  Calculate and retrieve the authenticated user's total nutrition intake within a date range
+// @Tags         nutrient
+// @Produce      json
+// @Param        startDate  query  string  true  "Start date in YYYY-MM-DD format"
+// @Param        endDate    query  string  true  "End date in YYYY-MM-DD format"
+// @Success      200  {object}  map[string]interface{}  "Nutrition summary for the date range"
+// @Failure      400  {object}  map[string]string       "Invalid date format or missing parameters"
+// @Failure      401  {object}  map[string]string       "Unauthorized"
+// @Failure      500  {object}  map[string]string       "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrition/range [get]
 func (c *NutrientController) GetUserNutritionByDateRange(ctx *gin.Context) {
 	// Get authenticated user
 	userClaims, ok := auth.GetCurrentUser(ctx)
@@ -181,6 +272,7 @@ func (c *NutrientController) GetUserNutritionByDateRange(ctx *gin.Context) {
 	// Get nutrition summary
 	summary, err := c.service.CalculateUserNutritionByDateRange(userClaims.UserID, startDate, endDate)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate nutrition"})
 		return
 	}
@@ -188,7 +280,16 @@ func (c *NutrientController) GetUserNutritionByDateRange(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, summary)
 }
 
-// GetUserCurrentNutrition returns nutrition calculation for today
+// GetUserCurrentNutrition godoc
+// @Summary      Get today's nutrition for authenticated user
+// @Description  Calculate and retrieve the authenticated user's total nutrition intake for today
+// @Tags         nutrient
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "Today's nutrition summary"
+// @Failure      401  {object}  map[string]string       "Unauthorized"
+// @Failure      500  {object}  map[string]string       "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrition/today [get]
 func (c *NutrientController) GetUserCurrentNutrition(ctx *gin.Context) {
 	// Get authenticated user
 	userClaims, ok := auth.GetCurrentUser(ctx)
@@ -203,6 +304,7 @@ func (c *NutrientController) GetUserCurrentNutrition(ctx *gin.Context) {
 	// Get nutrition summary
 	summary, err := c.service.CalculateUserNutritionByDate(userClaims.UserID, today)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate nutrition"})
 		return
 	}
@@ -210,7 +312,18 @@ func (c *NutrientController) GetUserCurrentNutrition(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, summary)
 }
 
-// GetMealNutrition returns nutrition calculation for a specific meal
+// GetMealNutrition godoc
+// @Summary      Get nutrition for a specific meal log
+// @Description  Calculate and retrieve the nutrition breakdown for a specific meal log (ownership required)
+// @Tags         nutrient
+// @Produce      json
+// @Param        mealLogId  path  int  true  "Meal log ID"
+// @Success      200  {object}  map[string]interface{}  "Nutrition summary for the meal"
+// @Failure      400  {object}  map[string]string       "Invalid meal log ID format"
+// @Failure      401  {object}  map[string]string       "Unauthorized"
+// @Failure      500  {object}  map[string]string       "Internal server error"
+// @Security     BearerAuth
+// @Router       /nutrition/meal/{mealLogId} [get]
 func (c *NutrientController) GetMealNutrition(ctx *gin.Context) {
 	// Get authenticated user
 	userClaims, ok := auth.GetCurrentUser(ctx)
@@ -230,6 +343,7 @@ func (c *NutrientController) GetMealNutrition(ctx *gin.Context) {
 	// Calculate nutrition for the specific meal
 	mealNutrition, err := c.service.CalculateMealNutrition(uint(mealLogID), userClaims.UserID)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to calculate meal nutrition"})
 		return
 	}

@@ -17,21 +17,17 @@ func NewPasswordService(userRepo *repository.UserRepository) *PasswordService {
 
 // UpdatePassword updates a user's password
 func (s *PasswordService) UpdatePassword(email string, newPassword string) error {
-	// Find user first
 	user, err := s.userRepo.FindByEmail(email)
 	if err != nil {
 		return err
 	}
 
-	// Generate bcrypt hash
 	hashedPassword, err := utils.HashPassword(newPassword)
 	if err != nil {
 		return err
 	}
 
-	// Update user's password hash
-	user.PasswordHash = hashedPassword
-	return s.userRepo.Update(user)
+	return s.userRepo.UpdatePassword(user.ID, hashedPassword)
 }
 
 // ValidateCurrentPassword validates if the provided current password is correct

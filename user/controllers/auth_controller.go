@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/momokapoolz/caloriesapp/auth"
 	"github.com/momokapoolz/caloriesapp/dto"
+	"github.com/momokapoolz/caloriesapp/helpers"
 	"github.com/momokapoolz/caloriesapp/user/models"
 	"github.com/momokapoolz/caloriesapp/user/repository"
 	"github.com/momokapoolz/caloriesapp/user/utils"
@@ -66,8 +67,18 @@ func toAuthUserResponse(user *models.User) dto.UserResponseDTO {
 	}
 }
 
-// Register creates a new user account.
-// Does NOT auto-login — the client should call POST /login after registration.
+// Register godoc
+// @Summary      Register new user
+// @Description  Create a new user account. Does not auto-login — call POST /login after registration.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        credential  body      dto.RegisterDTO      true  "Registration data"
+// @Success      201  {object}  dto.LoginResponseDTO  "User registered successfully"
+// @Failure      400  {object}  dto.LoginResponseDTO  "Invalid request format"
+// @Failure      409  {object}  dto.LoginResponseDTO  "Email already in use"
+// @Failure      500  {object}  dto.LoginResponseDTO  "Internal server error"
+// @Router       /register [post]
 func (c *UserAuthController) Register(ctx *gin.Context) {
 	var req dto.RegisterDTO
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -92,6 +103,7 @@ func (c *UserAuthController) Register(ctx *gin.Context) {
 
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
+		helpers.LogError(err)
 		log.Printf("[Register] Failed to hash password: %v", err)
 		ctx.JSON(http.StatusInternalServerError, dto.LoginResponseDTO{
 			Status:  "error",
@@ -115,6 +127,7 @@ func (c *UserAuthController) Register(ctx *gin.Context) {
 	}
 
 	if err := c.userRepo.Create(user); err != nil {
+		helpers.LogError(err)
 		log.Printf("[Register] Failed to create user: %v", err)
 		ctx.JSON(http.StatusInternalServerError, dto.LoginResponseDTO{
 			Status:  "error",
@@ -132,9 +145,18 @@ func (c *UserAuthController) Register(ctx *gin.Context) {
 	})
 }
 
-// Login authenticates a user and sets HttpOnly JWT cookies on success.
-// The response body contains user info and the access token expiry time.
-// The actual tokens are NOT in the response body — they are in cookies.
+// Login godoc
+// @Summary      Login
+// @Description  Authenticate user with email and password. Sets HttpOnly JWT cookies on success.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        credential  body      dto.LoginRequestDTO               true  "Login credential"
+// @Success      200  {object}  dto.LoginResponseDTO "Login successfully"
+// @Failure  	 400  {object}  map[string]string    "Invalid request format"
+// @Failure  	 401  {object}  map[string]string    "Invalid credentials"
+// @Failure  	 500  {object}  map[string]string    "Internal server error"
+// @Router       /login [post]
 func (c *UserAuthController) Login(ctx *gin.Context) {
 	var req dto.LoginRequestDTO
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -168,6 +190,7 @@ func (c *UserAuthController) Login(ctx *gin.Context) {
 
 	tokenPair, err := c.jwtService.GenerateTokenPair(user.ID, user.Email, user.Role)
 	if err != nil {
+		helpers.LogError(err)
 		log.Printf("[Login] Token generation failed: %v", err)
 		ctx.JSON(http.StatusInternalServerError, dto.LoginResponseDTO{
 			Status:  "error",
@@ -188,6 +211,14 @@ func (c *UserAuthController) Login(ctx *gin.Context) {
 	})
 }
 
+// Logout godoc
+// @Summary      Logout
+// @Description  Clear both auth cookies, effectively ending the session
+// @Tags         auth
+// @Produce      json
+// @Success      200  {object}  dto.LoginResponseDTO  "Logged out successfully"
+// @Security     BearerAuth
+// @Router       /logout [post]
 // Logout clears both auth cookies, effectively ending the session.
 // No server-side token store to clean up — the JWT simply becomes unused.
 func (c *UserAuthController) Logout(ctx *gin.Context) {
@@ -198,6 +229,14 @@ func (c *UserAuthController) Logout(ctx *gin.Context) {
 	})
 }
 
+// Refresh godoc
+// @Summary      Refresh access token
+// @Description  Read the refresh_token cookie, validate it, and issue a new token pair
+// @Tags         auth
+// @Produce      json
+// @Success      200  {object}  dto.LoginResponseDTO  "Token refreshed successfully"
+// @Failure      401  {object}  dto.LoginResponseDTO  "Refresh token not found or invalid"
+// @Router       /refresh [post]
 // Refresh reads the refresh_token cookie, validates it, and issues a new token pair.
 // The new access_token and refresh_token cookies replace the old ones.
 func (c *UserAuthController) Refresh(ctx *gin.Context) {

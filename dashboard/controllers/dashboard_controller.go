@@ -1,17 +1,20 @@
 package controllers
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/momokapoolz/caloriesapp/auth"
 	"github.com/momokapoolz/caloriesapp/dashboard/services"
-	"net/http"
-	"time"
+	"github.com/momokapoolz/caloriesapp/helpers"
 )
 
 type DashboardController struct {
 	service *services.DashboardService
 }
 
+// NewDashboardController creates a new dashboard controller instance
 func NewDashboardController(service *services.DashboardService) *DashboardController {
 	return &DashboardController{service: service}
 }
@@ -23,12 +26,12 @@ func NewDashboardController(service *services.DashboardService) *DashboardContro
 // @Accept       json
 // @Produce      json
 // @Param        date  query     string  false  "Date in YYYY-MM-DD format (default: today)"
-// @Success      200   {object}  dto.DashboardResponseDTO
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
-// @Failure      500   {object}  map[string]string
+// @Success      200   {object}  dto.DashboardResponseDTO  "Dashboard data retrieved successfully"
+// @Failure      400   {object}  map[string]string         "Invalid date format"
+// @Failure      401   {object}  map[string]string         "Unauthorized"
+// @Failure      500   {object}  map[string]string         "Internal server error"
 // @Security     BearerAuth
-// @Router       /dashboard [get]
+// @Router       /dashboard/ [get]
 func (c *DashboardController) GetUserDashboard(ctx *gin.Context) {
 	//Get current user from JWT token
 	userClaims, ok := auth.GetCurrentUser(ctx)
@@ -48,6 +51,7 @@ func (c *DashboardController) GetUserDashboard(ctx *gin.Context) {
 	//Get dashboard data from service
 	dashboard, err := c.service.GetUserDashboard(userClaims.UserID, date)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get dashboard data: " + err.Error()})
 		return
 	}

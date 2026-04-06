@@ -4,6 +4,7 @@ type Nutrient struct {
 	ID       uint   `gorm:"primaryKey;column:id" json:"id"`
 	Name     string `gorm:"column:name;not null" json:"name"`
 	Category string `gorm:"column:category;not null" json:"category"`
+	Unit     string `gorm:"column:unit;not null;default:g" json:"unit"`
 }
 
 // TableName specifies the table name for the Nutrient model

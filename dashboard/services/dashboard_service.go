@@ -2,11 +2,13 @@ package services
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/momokapoolz/caloriesapp/dto"
 	"github.com/momokapoolz/caloriesapp/food/repository"
 	foodNutrientsRepository "github.com/momokapoolz/caloriesapp/food_nutrients/repository"
+	"github.com/momokapoolz/caloriesapp/helpers"
 	mealLogRepository "github.com/momokapoolz/caloriesapp/meal_log/repository"
 	mealLogItemsRepository "github.com/momokapoolz/caloriesapp/meal_log_items/repository"
 	nutrientRepository "github.com/momokapoolz/caloriesapp/nutrient/repository"
@@ -51,6 +53,7 @@ func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.D
 	// Get all meal logs for the user on the specified date
 	mealLogs, err := s.mealLogRepo.GetByUserIDAndDate(userID, date)
 	if err != nil {
+		helpers.LogError(err)
 		return nil, fmt.Errorf("failed to get meal logs: %w", err)
 	}
 
@@ -76,6 +79,7 @@ func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.D
 		// Get meal log items for this meal log
 		items, err := s.mealLogItemsRepo.GetByMealLogID(mealLog.ID)
 		if err != nil {
+			helpers.LogError(err)
 			return nil, fmt.Errorf("failed to get meal log items: %w", err)
 		}
 
@@ -86,12 +90,14 @@ func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.D
 			// Get food information
 			food, err := s.foodRepo.GetByID(item.FoodID)
 			if err != nil {
+				helpers.LogError(err)
 				return nil, fmt.Errorf("failed to get food: %w", err)
 			}
 
 			// Calculate calories for this food item
 			calories, err := s.calculateCalories(item.FoodID, item.QuantityGrams)
 			if err != nil {
+				helpers.LogError(err)
 				return nil, fmt.Errorf("failed to calculate calories: %w", err)
 			}
 
@@ -127,24 +133,42 @@ func (s *DashboardService) GetUserDashboard(userID uint, date time.Time) (*dto.D
 	return dashboard, nil
 }
 
-// calculateCalories calculates the calories for a specific food item and quantity
-func (s *DashboardService) calculateCalories(foodID uint, grams float64) (float64, error) {
-	// Get calorie nutrient for this food
-	foodNutrient, err := s.foodNutrientsRepo.GetByFoodIDAndNutrientID(foodID, CaloriesNutrientID)
-	if err != nil {
-		// If no specific calorie data is found, use a basic estimate (4 calories per gram)
-		return grams * 4, nil
-	}
-
-	// Calculate calories based on the amount per 100g and the actual grams consumed
-	calories := (foodNutrient.AmountPer100g / 100) * grams
-	return calories, nil
+// roundTo2dp rounds a float64 to 2 decimal places to avoid floating point display errors.
+func roundTo2dp(v float64) float64 {
+	return math.Round(v*100) / 100
 }
 
-// calculateMacronutrients calculates the macronutrients for a meal log
+// calculateCalories calculates the calories for a specific food item and quantity
+func (s *DashboardService) calculateCalories(foodID uint, grams float64) (float64, error) {
+	foodNutrient, err := s.foodNutrientsRepo.GetByFoodIDAndNutrientID(foodID, CaloriesNutrientID)
+	if err != nil {
+		// Fallback: 4 kcal per gram if no calorie record exists for the food
+		return roundTo2dp(grams * 4), nil
+	}
+
+	calories := (foodNutrient.AmountPer100g / 100) * grams
+	return roundTo2dp(calories), nil
+}
+
+// calculateMacronutrients calculates protein, carbs, and fat for all items in a meal log
 func (s *DashboardService) calculateMacronutrients(mealLogID uint) (protein, carbs, fat float64, err error) {
-	// This is a stub implementation
-	// In a real implementation, you would calculate these values from the food nutrients
-	// For now, we'll return dummy values
-	return 0, 0, 0, nil
+	items, err := s.mealLogItemsRepo.GetByMealLogID(mealLogID)
+	if err != nil {
+		helpers.LogError(err)
+		return 0, 0, 0, fmt.Errorf("failed to get meal log items: %w", err)
+	}
+
+	for _, item := range items {
+		if fn, e := s.foodNutrientsRepo.GetByFoodIDAndNutrientID(item.FoodID, ProteinNutrientID); e == nil {
+			protein += (fn.AmountPer100g / 100) * item.QuantityGrams
+		}
+		if fn, e := s.foodNutrientsRepo.GetByFoodIDAndNutrientID(item.FoodID, CarbohydrateNutrientID); e == nil {
+			carbs += (fn.AmountPer100g / 100) * item.QuantityGrams
+		}
+		if fn, e := s.foodNutrientsRepo.GetByFoodIDAndNutrientID(item.FoodID, FatNutrientID); e == nil {
+			fat += (fn.AmountPer100g / 100) * item.QuantityGrams
+		}
+	}
+
+	return roundTo2dp(protein), roundTo2dp(carbs), roundTo2dp(fat), nil
 }

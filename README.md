@@ -82,6 +82,9 @@ Each module follows a layered architecture:
 - `PUT /api/v1/user-biometrics/:id` - Update a user biometric
 - `DELETE /api/v1/user-biometrics/:id` - Delete a user biometric
 
+### Swagger
+- `http://localhost:8080/swagger/index.html`
+
 ## Getting Started
 
 ### Prerequisites

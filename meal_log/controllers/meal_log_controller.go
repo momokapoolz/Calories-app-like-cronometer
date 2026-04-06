@@ -10,6 +10,7 @@ import (
 	"github.com/momokapoolz/caloriesapp/dto"
 
 	"github.com/gin-gonic/gin"
+	"github.com/momokapoolz/caloriesapp/helpers"
 	"github.com/momokapoolz/caloriesapp/meal_log/services"
 )
 
@@ -23,7 +24,19 @@ func NewMealLogController(service *services.MealLogService) *MealLogController {
 	return &MealLogController{service: service}
 }
 
-// CreateMealLog handles the creation of a new meal log record (Create meal log API using DTO)
+// CreateMealLog godoc
+// @Summary      Create meal log
+// @Description  Create a new meal log with items for the authenticated user
+// @Tags         meal_log
+// @Accept       json
+// @Produce      json
+// @Param        meal_log  body      dto.CreateMealLogRequestDTO  true  "Meal log data"
+// @Success      201  {object}  dto.CreateMealLogRequestDTO  "Meal log created successfully"
+// @Failure      400  {object}  map[string]string            "Invalid request body"
+// @Failure      401  {object}  map[string]string            "Unauthorized"
+// @Failure      500  {object}  map[string]string            "Internal server error"
+// @Security     BearerAuth
+// @Router       /meal-logs/ [post]
 func (c *MealLogController) CreateMealLog(ctx *gin.Context) {
 	var req dto.CreateMealLogRequestDTO
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -39,6 +52,7 @@ func (c *MealLogController) CreateMealLog(ctx *gin.Context) {
 
 	mealLogWithItems, err := c.service.CreateMealLogComprehensive(userClaims.UserID, req)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -46,7 +60,18 @@ func (c *MealLogController) CreateMealLog(ctx *gin.Context) {
 
 }
 
-// GetMealLog retrieves a meal log by its ID
+// GetMealLog godoc
+// @Summary      Get a meal log by ID
+// @Description  Retrieve a specific meal log record by its ID
+// @Tags         meal_log
+// @Produce      json
+// @Param        id  path      int  true  "Meal log ID"
+// @Success      200  {object}  dto.CreateMealLogRequestDTO  "Meal log retrieved successfully"
+// @Failure      400  {object}  map[string]string            "Invalid ID format"
+// @Failure      404  {object}  map[string]string            "Meal log not found"
+// @Failure      500  {object}  map[string]string            "Internal server error"
+// @Security     BearerAuth
+// @Router       /meal-logs/{id} [get]
 func (c *MealLogController) GetMealLog(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -64,10 +89,18 @@ func (c *MealLogController) GetMealLog(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, mealLog)
 }
 
-// GetMealLogsByUserID retrieves all meal logs for a specific user
+// GetMealLogsByUserID godoc
+// @Summary      Get meal logs by authenticated user
+// @Description  Retrieve all meal logs belonging to the currently authenticated user
+// @Tags         meal_log
+// @Produce      json
+// @Success      200  {array}   dto.CreateMealLogRequestDTO  "List of meal logs"
+// @Failure      401  {object}  map[string]string            "Unauthorized"
+// @Failure      500  {object}  map[string]string            "Internal server error"
+// @Security     BearerAuth
+// @Router       /meal-logs/user [get]
 func (c *MealLogController) GetMealLogsByUserID(ctx *gin.Context) {
 
-	//update auth
 	claims, ok := auth.GetCurrentUser(ctx)
 
 	if !ok {
@@ -77,29 +110,27 @@ func (c *MealLogController) GetMealLogsByUserID(ctx *gin.Context) {
 
 	mealLogs, err := c.service.GetMealLogsByUserID(uint(claims.UserID))
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve meal logs"})
 		return
 	}
 
-	//userIDStr := ctx.Param("userId")
-	//userID, err := strconv.ParseUint(userIDStr, 10, 32)
-	//if err != nil {
-	//	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
-	//	return
-	//}
-	//
-	//mealLogs, err := c.service.GetMealLogsByUserID(uint(userID))
-	//if err != nil {
-	//	ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve meal logs"})
-	//	return
-	//}
-
 	ctx.JSON(http.StatusOK, mealLogs)
 }
 
-// GetMealLogsByUserIDAndDate retrieves meal logs for a specific user on a specific date
+// GetMealLogsByUserIDAndDate godoc
+// @Summary      Get meal logs by date
+// @Description  Retrieve all meal logs for the authenticated user on a specific date
+// @Tags         meal_log
+// @Produce      json
+// @Param        date  path  string  true  "Date in YYYY-MM-DD format"
+// @Success      200  {array}   dto.CreateMealLogRequestDTO  "List of meal logs for the date"
+// @Failure      400  {object}  map[string]string            "Invalid date format"
+// @Failure      401  {object}  map[string]string            "Unauthorized"
+// @Failure      500  {object}  map[string]string            "Internal server error"
+// @Security     BearerAuth
+// @Router       /meal-logs/user/date/{date} [get]
 func (c *MealLogController) GetMealLogsByUserIDAndDate(ctx *gin.Context) {
-	// Lấy user từ JWT
 	claims, ok := auth.GetCurrentUser(ctx)
 	if !ok {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -107,7 +138,6 @@ func (c *MealLogController) GetMealLogsByUserIDAndDate(ctx *gin.Context) {
 	}
 	userID := claims.UserID
 
-	// Lấy và parse ngày từ path param
 	dateStr := ctx.Param("date")
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
@@ -115,9 +145,9 @@ func (c *MealLogController) GetMealLogsByUserIDAndDate(ctx *gin.Context) {
 		return
 	}
 
-	// Gọi service để lấy meal logs theo user và ngày
 	mealLogs, err := c.service.GetMealLogsByUserIDAndDate(userID, date)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve meal logs for the specified date"})
 		return
 	}
@@ -125,10 +155,20 @@ func (c *MealLogController) GetMealLogsByUserIDAndDate(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, mealLogs)
 }
 
-// from here
-// GetMealLogsByUserIDAndDateRange retrieves meal logs for a specific user within a date range
+// GetMealLogsByUserIDAndDateRange godoc
+// @Summary      Get meal logs by date range
+// @Description  Retrieve all meal logs for the authenticated user within a date range
+// @Tags         meal_log
+// @Produce      json
+// @Param        startDate  query  string  true  "Start date in YYYY-MM-DD format"
+// @Param        endDate    query  string  true  "End date in YYYY-MM-DD format"
+// @Success      200  {array}   dto.CreateMealLogRequestDTO  "List of meal logs in the date range"
+// @Failure      400  {object}  map[string]string            "Invalid date format or missing parameters"
+// @Failure      401  {object}  map[string]string            "Unauthorized"
+// @Failure      500  {object}  map[string]string            "Internal server error"
+// @Security     BearerAuth
+// @Router       /meal-logs/user/date-range [get]
 func (c *MealLogController) GetMealLogsByUserIDAndDateRange(ctx *gin.Context) {
-	// Lấy user từ JWT
 	claims, ok := auth.GetCurrentUser(ctx)
 	if !ok {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -160,6 +200,7 @@ func (c *MealLogController) GetMealLogsByUserIDAndDateRange(ctx *gin.Context) {
 
 	mealLogs, err := c.service.GetMealLogsByUserIDAndDateRange(userID, startDate, endDate)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve meal logs for the specified date range"})
 		return
 	}
@@ -167,7 +208,22 @@ func (c *MealLogController) GetMealLogsByUserIDAndDateRange(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, mealLogs)
 }
 
-// UpdateMealLog updates a meal log record
+// UpdateMealLog godoc
+// @Summary      Update a meal log
+// @Description  Update the meal type of an existing meal log by ID (ownership required)
+// @Tags         meal_log
+// @Accept       json
+// @Produce      json
+// @Param        id        path  int                      true  "Meal log ID"
+// @Param        meal_log  body  object{meal_type=string} true  "Updated meal log data"
+// @Success      200  {object}  dto.CreateMealLogRequestDTO  "Meal log updated successfully"
+// @Failure      400  {object}  map[string]string            "Invalid ID or request body"
+// @Failure      401  {object}  map[string]string            "Unauthorized"
+// @Failure      403  {object}  map[string]string            "Forbidden — not the owner"
+// @Failure      404  {object}  map[string]string            "Meal log not found"
+// @Failure      500  {object}  map[string]string            "Internal server error"
+// @Security     BearerAuth
+// @Router       /meal-logs/{id} [put]
 func (c *MealLogController) UpdateMealLog(ctx *gin.Context) {
 	claims, ok := auth.GetCurrentUser(ctx)
 	if !ok {
@@ -210,6 +266,7 @@ func (c *MealLogController) UpdateMealLog(ctx *gin.Context) {
 	existingMealLog.MealType = updateRequest.MealType
 
 	if err := c.service.UpdateMealLog(existingMealLog); err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update meal log"})
 		return
 	}
@@ -217,7 +274,19 @@ func (c *MealLogController) UpdateMealLog(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, existingMealLog)
 }
 
-// DeleteMealLog removes a meal log record
+// DeleteMealLog godoc
+// @Summary      Delete a meal log
+// @Description  Delete a meal log by ID (ownership required)
+// @Tags         meal_log
+// @Produce      json
+// @Param        id  path  int  true  "Meal log ID"
+// @Success      200  {object}  map[string]string  "Meal log deleted successfully"
+// @Failure      400  {object}  map[string]string  "Invalid ID format"
+// @Failure      401  {object}  map[string]string  "Unauthorized"
+// @Failure      403  {object}  map[string]string  "Forbidden — not the owner"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /meal-logs/{id} [delete]
 func (c *MealLogController) DeleteMealLog(ctx *gin.Context) {
 	claims, ok := auth.GetCurrentUser(ctx)
 	if !ok {
@@ -233,7 +302,6 @@ func (c *MealLogController) DeleteMealLog(ctx *gin.Context) {
 		return
 	}
 
-	// Optional: kiểm tra meal log này có thuộc về user không
 	mealLog, err := c.service.GetMealLogByID(uint(id))
 	if err != nil || mealLog.UserID != userID {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to delete this meal log"})
@@ -241,6 +309,7 @@ func (c *MealLogController) DeleteMealLog(ctx *gin.Context) {
 	}
 
 	if err := c.service.DeleteMealLog(uint(id)); err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete meal log"})
 		return
 	}

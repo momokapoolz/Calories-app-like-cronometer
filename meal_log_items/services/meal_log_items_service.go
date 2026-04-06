@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	foodRepo "github.com/momokapoolz/caloriesapp/food/repository"
+	"github.com/momokapoolz/caloriesapp/helpers"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/models"
 	"github.com/momokapoolz/caloriesapp/meal_log_items/repository"
 )
@@ -33,8 +34,7 @@ func NewMealLogItemService(repo *repository.MealLogItemRepository, foodRepo *foo
 func (s *MealLogItemService) CreateMealLogItem(item *models.MealLogItem) error {
 	// Auto-calculate QuantityGrams based on food serving size and quantity
 	if err := s.calculateQuantityGrams(item); err != nil {
-		// Log error but don't fail - use provided value
-		fmt.Printf("Warning: Could not auto-calculate quantity_grams: %v\n", err)
+		helpers.LogError(err)
 	}
 	return s.repo.Create(item)
 }
@@ -58,8 +58,7 @@ func (s *MealLogItemService) GetMealLogItemsByFoodID(foodID uint) ([]models.Meal
 func (s *MealLogItemService) UpdateMealLogItem(item *models.MealLogItem) error {
 	// Auto-calculate QuantityGrams based on food serving size and quantity
 	if err := s.calculateQuantityGrams(item); err != nil {
-		// Log error but don't fail - use provided value
-		fmt.Printf("Warning: Could not auto-calculate quantity_grams: %v\n", err)
+		helpers.LogError(err)
 	}
 	return s.repo.Update(item)
 }
@@ -84,8 +83,7 @@ func (s *MealLogItemService) AddItemsToMealLog(mealLogID uint, items []models.Me
 
 		// Auto-calculate QuantityGrams for each item
 		if err := s.calculateQuantityGrams(&items[i]); err != nil {
-			// Log error but don't fail - use provided value
-			fmt.Printf("Warning: Could not auto-calculate quantity_grams for item %d: %v\n", i, err)
+			helpers.LogError(err)
 		}
 	}
 
@@ -109,8 +107,6 @@ func (s *MealLogItemService) calculateQuantityGrams(item *models.MealLogItem) er
 	// 2. Or if the provided value seems incorrect (simple heuristic)
 	if item.QuantityGrams == 0 || s.shouldRecalculateGrams(item, calculatedGrams) {
 		item.QuantityGrams = calculatedGrams
-		fmt.Printf("Auto-calculated QuantityGrams: %d × %.2f = %.2f grams\n",
-			item.Quantity, food.ServingSizeGram, calculatedGrams)
 	}
 
 	return nil

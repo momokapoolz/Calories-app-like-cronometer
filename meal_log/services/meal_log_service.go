@@ -1,10 +1,11 @@
 package services
 
 import (
-	"github.com/momokapoolz/caloriesapp/dto"
 	"time"
 
+	"github.com/momokapoolz/caloriesapp/dto"
 	foodRepo "github.com/momokapoolz/caloriesapp/food/repository"
+	"github.com/momokapoolz/caloriesapp/helpers"
 	"github.com/momokapoolz/caloriesapp/meal_log/models"
 	"github.com/momokapoolz/caloriesapp/meal_log/repository"
 	mealLogItemsModels "github.com/momokapoolz/caloriesapp/meal_log_items/models"
@@ -45,6 +46,7 @@ func (s *MealLogService) CreateMealLogComprehensive(userID uint, req dto.CreateM
 	}
 
 	if err := s.CreateMealLog(&mealLog); err != nil {
+		helpers.LogError(err)
 		return nil, err
 	}
 
@@ -58,6 +60,7 @@ func (s *MealLogService) CreateMealLogComprehensive(userID uint, req dto.CreateM
 		}
 
 		if err := s.CreateMealLogItem(&mealLogItem); err != nil {
+			helpers.LogError(err)
 			return nil, err
 		}
 	}
@@ -123,6 +126,7 @@ func (s *MealLogService) UpdateMealLog(mealLog *models.MealLog) error {
 func (s *MealLogService) DeleteMealLog(id uint) error {
 	// First delete all meal log items
 	if err := s.mealLogItemsRepo.DeleteByMealLogID(id); err != nil {
+		helpers.LogError(err)
 		return err
 	}
 

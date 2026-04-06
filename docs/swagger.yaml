@@ -1,5 +1,36 @@
 basePath: /api/v1
 definitions:
+  dto.AddItemsToMealLogRequestDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.MealLogItemDTO'
+        type: array
+    required:
+    - items
+    type: object
+  dto.AdminUpdatePasswordRequestDTO:
+    properties:
+      email:
+        type: string
+      new_password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - new_password
+    type: object
+  dto.CreateMealLogRequestDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.MealLogItemDTO'
+        type: array
+      meal_type:
+        type: string
+      note:
+        type: string
+    type: object
   dto.DashboardResponseDTO:
     properties:
       date:
@@ -30,6 +61,27 @@ definitions:
       quantity_grams:
         type: number
     type: object
+  dto.LoginRequestDTO:
+    properties:
+      email:
+        example: momomo@email.com
+        type: string
+      password:
+        example: momomo36
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.LoginResponseDTO:
+    properties:
+      data: {}
+      message:
+        type: string
+      status:
+        type: string
+    type: object
   dto.MacronutrientsDTO:
     properties:
       carbohydrate:
@@ -37,6 +89,15 @@ definitions:
       fat:
         type: number
       protein:
+        type: number
+    type: object
+  dto.MealLogItemDTO:
+    properties:
+      food_id:
+        type: integer
+      quantity:
+        type: integer
+      quantity_grams:
         type: number
     type: object
   dto.MealLogSummaryDTO:
@@ -54,6 +115,130 @@ definitions:
       total_calories:
         type: number
     type: object
+  dto.RegisterDTO:
+    properties:
+      activity_level:
+        type: string
+      age:
+        minimum: 1
+        type: integer
+      email:
+        type: string
+      gender:
+        type: string
+      goal:
+        type: string
+      height:
+        type: number
+      name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      weight:
+        type: number
+    required:
+    - activity_level
+    - age
+    - email
+    - gender
+    - goal
+    - height
+    - name
+    - password
+    - weight
+    type: object
+  dto.UpdatePasswordRequestDTO:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        minLength: 6
+        type: string
+    required:
+    - current_password
+    - new_password
+    type: object
+  dto.UserUpdateProfileRequestDTO:
+    properties:
+      activity_level:
+        type: string
+      age:
+        type: integer
+      email:
+        type: string
+      gender:
+        type: string
+      goal:
+        type: string
+      height:
+        type: number
+      name:
+        type: string
+      weight:
+        type: number
+    type: object
+  models.Food:
+    properties:
+      id:
+        type: integer
+      image_url:
+        type: string
+      name:
+        type: string
+      serving_size_gram:
+        type: number
+      source:
+        type: string
+    type: object
+  models.FoodNutrient:
+    properties:
+      amount_per_100g:
+        type: number
+      food_id:
+        type: integer
+      id:
+        type: integer
+      nutrient_id:
+        type: integer
+    type: object
+  models.MealLogItem:
+    properties:
+      food_id:
+        type: integer
+      id:
+        type: integer
+      meal_log_id:
+        type: integer
+      quantity:
+        type: integer
+      quantity_grams:
+        type: number
+    type: object
+  models.Nutrient:
+    properties:
+      category:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.UserBiometric:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      type:
+        type: string
+      unit:
+        type: string
+      user_id:
+        type: integer
+      value:
+        type: number
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -61,7 +246,80 @@ info:
   title: My API Swagger
   version: "1.0"
 paths:
-  /dashboard:
+  /account:
+    delete:
+      description: Permanently remove the authenticated user's account
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user account
+      tags:
+      - user
+  /admin/user/password/update:
+    post:
+      consumes:
+      - application/json
+      description: Allow an administrator to update any user's password by email
+      parameters:
+      - description: Target email and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdminUpdatePasswordRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password updated successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Admin update user password
+      tags:
+      - user
+  /dashboard/:
     get:
       consumes:
       - application/json
@@ -75,11 +333,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Dashboard data retrieved successfully
           schema:
             $ref: '#/definitions/dto.DashboardResponseDTO'
         "400":
-          description: Bad Request
+          description: Invalid date format
           schema:
             additionalProperties:
               type: string
@@ -91,7 +349,7 @@ paths:
               type: string
             type: object
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             additionalProperties:
               type: string
@@ -101,4 +359,2157 @@ paths:
       summary: Get user dashboard
       tags:
       - dashboard
+  /food-nutrients/:
+    get:
+      description: Retrieve all food nutrient records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of food nutrients
+          schema:
+            items:
+              $ref: '#/definitions/models.FoodNutrient'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all food nutrients
+      tags:
+      - food_nutrient
+    post:
+      consumes:
+      - application/json
+      description: Create a new food nutrient record
+      parameters:
+      - description: Food nutrient data
+        in: body
+        name: food_nutrient
+        required: true
+        schema:
+          $ref: '#/definitions/models.FoodNutrient'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Food nutrient created successfully
+          schema:
+            $ref: '#/definitions/models.FoodNutrient'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create food nutrient
+      tags:
+      - food_nutrient
+  /food-nutrients/{id}:
+    delete:
+      description: Delete a food nutrient record by ID
+      parameters:
+      - description: Food nutrient ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Food nutrient deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete food nutrient
+      tags:
+      - food_nutrient
+    get:
+      description: Retrieve a food nutrient record by its ID
+      parameters:
+      - description: Food nutrient ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Food nutrient retrieved successfully
+          schema:
+            $ref: '#/definitions/models.FoodNutrient'
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Food nutrient not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get food nutrient by ID
+      tags:
+      - food_nutrient
+    put:
+      consumes:
+      - application/json
+      description: Update an existing food nutrient record by ID
+      parameters:
+      - description: Food nutrient ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated food nutrient data
+        in: body
+        name: food_nutrient
+        required: true
+        schema:
+          $ref: '#/definitions/models.FoodNutrient'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Food nutrient updated successfully
+          schema:
+            $ref: '#/definitions/models.FoodNutrient'
+        "400":
+          description: Invalid ID or request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update food nutrient
+      tags:
+      - food_nutrient
+  /food-nutrients/food/{foodId}:
+    get:
+      description: Retrieve all nutrient records associated with a specific food
+      parameters:
+      - description: Food ID
+        in: path
+        name: foodId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of food nutrients for the food
+          schema:
+            items:
+              $ref: '#/definitions/models.FoodNutrient'
+            type: array
+        "400":
+          description: Invalid food ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get food nutrients by food ID
+      tags:
+      - food_nutrient
+  /food-nutrients/nutrient/{nutrientId}:
+    get:
+      description: Retrieve all food nutrient records associated with a specific nutrient
+      parameters:
+      - description: Nutrient ID
+        in: path
+        name: nutrientId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of food nutrients for the nutrient
+          schema:
+            items:
+              $ref: '#/definitions/models.FoodNutrient'
+            type: array
+        "400":
+          description: Invalid nutrient ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get food nutrients by nutrient ID
+      tags:
+      - food_nutrient
+  /foods/:
+    get:
+      description: Retrieve all food records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of foods
+          schema:
+            items:
+              $ref: '#/definitions/models.Food'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all foods
+      tags:
+      - food
+    post:
+      consumes:
+      - application/json
+      description: Create a new food record
+      parameters:
+      - description: Food data
+        in: body
+        name: food
+        required: true
+        schema:
+          $ref: '#/definitions/models.Food'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Food created successfully
+          schema:
+            $ref: '#/definitions/models.Food'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create new food
+      tags:
+      - food
+  /foods/{id}:
+    delete:
+      description: Delete a food record by ID
+      parameters:
+      - description: Food ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Food deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete food
+      tags:
+      - food
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a food record by ID
+      parameters:
+      - description: Food ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Food retrieved successfully
+          schema:
+            $ref: '#/definitions/models.Food'
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Food not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a specific food
+      tags:
+      - food
+    put:
+      consumes:
+      - application/json
+      description: Update an existing food record by ID
+      parameters:
+      - description: Food ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated food data
+        in: body
+        name: food
+        required: true
+        schema:
+          $ref: '#/definitions/models.Food'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Food updated successfully
+          schema:
+            $ref: '#/definitions/models.Food'
+        "400":
+          description: Invalid ID or request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update food
+      tags:
+      - food
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password. Sets HttpOnly JWT cookies
+        on success.
+      parameters:
+      - description: Login credential
+        in: body
+        name: credential
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successfully
+          schema:
+            $ref: '#/definitions/dto.LoginResponseDTO'
+        "400":
+          description: Invalid request format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - auth
+  /logout:
+    post:
+      description: Clear both auth cookies, effectively ending the session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logged out successfully
+          schema:
+            $ref: '#/definitions/dto.LoginResponseDTO'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - auth
+  /meal-log-items/:
+    post:
+      consumes:
+      - application/json
+      description: Create a new meal log item record
+      parameters:
+      - description: Meal log item data
+        in: body
+        name: meal_log_item
+        required: true
+        schema:
+          $ref: '#/definitions/models.MealLogItem'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Meal log item created successfully
+          schema:
+            $ref: '#/definitions/models.MealLogItem'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create meal log item
+      tags:
+      - meal_log_item
+  /meal-log-items/{id}:
+    delete:
+      description: Delete a specific meal log item by ID
+      parameters:
+      - description: Meal log item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Meal log item deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete meal log item
+      tags:
+      - meal_log_item
+    get:
+      description: Retrieve a specific meal log item record by its ID
+      parameters:
+      - description: Meal log item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Meal log item retrieved successfully
+          schema:
+            $ref: '#/definitions/models.MealLogItem'
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Meal log item not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get meal log item by ID
+      tags:
+      - meal_log_item
+    put:
+      consumes:
+      - application/json
+      description: Update an existing meal log item by ID
+      parameters:
+      - description: Meal log item ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated meal log item data
+        in: body
+        name: meal_log_item
+        required: true
+        schema:
+          $ref: '#/definitions/models.MealLogItem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Meal log item updated successfully
+          schema:
+            $ref: '#/definitions/models.MealLogItem'
+        "400":
+          description: Invalid ID or request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update meal log item
+      tags:
+      - meal_log_item
+  /meal-log-items/food/{foodId}:
+    get:
+      description: Retrieve all meal log items associated with a specific food
+      parameters:
+      - description: Food ID
+        in: path
+        name: foodId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of meal log items for the food
+          schema:
+            items:
+              $ref: '#/definitions/models.MealLogItem'
+            type: array
+        "400":
+          description: Invalid food ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get meal log items by food ID
+      tags:
+      - meal_log_item
+  /meal-log-items/meal-log/{mealLogId}:
+    delete:
+      description: Delete all meal log items associated with a specific meal log ID
+      parameters:
+      - description: Meal log ID
+        in: path
+        name: mealLogId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All meal log items deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid meal log ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete all items for a meal log
+      tags:
+      - meal_log_item
+    get:
+      description: Retrieve all items belonging to a specific meal log
+      parameters:
+      - description: Meal log ID
+        in: path
+        name: mealLogId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of meal log items
+          schema:
+            items:
+              $ref: '#/definitions/models.MealLogItem'
+            type: array
+        "400":
+          description: Invalid meal log ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get meal log items by meal log ID
+      tags:
+      - meal_log_item
+  /meal-logs/:
+    post:
+      consumes:
+      - application/json
+      description: Create a new meal log with items for the authenticated user
+      parameters:
+      - description: Meal log data
+        in: body
+        name: meal_log
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateMealLogRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Meal log created successfully
+          schema:
+            $ref: '#/definitions/dto.CreateMealLogRequestDTO'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create meal log
+      tags:
+      - meal_log
+  /meal-logs/{id}:
+    delete:
+      description: Delete a meal log by ID (ownership required)
+      parameters:
+      - description: Meal log ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Meal log deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden — not the owner
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a meal log
+      tags:
+      - meal_log
+    get:
+      description: Retrieve a specific meal log record by its ID
+      parameters:
+      - description: Meal log ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Meal log retrieved successfully
+          schema:
+            $ref: '#/definitions/dto.CreateMealLogRequestDTO'
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Meal log not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a meal log by ID
+      tags:
+      - meal_log
+    put:
+      consumes:
+      - application/json
+      description: Update the meal type of an existing meal log by ID (ownership required)
+      parameters:
+      - description: Meal log ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated meal log data
+        in: body
+        name: meal_log
+        required: true
+        schema:
+          properties:
+            meal_type:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Meal log updated successfully
+          schema:
+            $ref: '#/definitions/dto.CreateMealLogRequestDTO'
+        "400":
+          description: Invalid ID or request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden — not the owner
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Meal log not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a meal log
+      tags:
+      - meal_log
+  /meal-logs/{id}/items:
+    post:
+      consumes:
+      - application/json
+      description: Add one or more food items to an existing meal log (ownership required)
+      parameters:
+      - description: Meal log ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Items to add
+        in: body
+        name: meal_log_item
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddItemsToMealLogRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Items added to meal log successfully
+          schema:
+            items:
+              $ref: '#/definitions/models.MealLogItem'
+            type: array
+        "400":
+          description: Invalid ID or request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden — not the owner
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add items to an existing meal log
+      tags:
+      - meal_log_item
+  /meal-logs/user:
+    get:
+      description: Retrieve all meal logs belonging to the currently authenticated
+        user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of meal logs
+          schema:
+            items:
+              $ref: '#/definitions/dto.CreateMealLogRequestDTO'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get meal logs by authenticated user
+      tags:
+      - meal_log
+  /meal-logs/user/date-range:
+    get:
+      description: Retrieve all meal logs for the authenticated user within a date
+        range
+      parameters:
+      - description: Start date in YYYY-MM-DD format
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End date in YYYY-MM-DD format
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of meal logs in the date range
+          schema:
+            items:
+              $ref: '#/definitions/dto.CreateMealLogRequestDTO'
+            type: array
+        "400":
+          description: Invalid date format or missing parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get meal logs by date range
+      tags:
+      - meal_log
+  /meal-logs/user/date/{date}:
+    get:
+      description: Retrieve all meal logs for the authenticated user on a specific
+        date
+      parameters:
+      - description: Date in YYYY-MM-DD format
+        in: path
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of meal logs for the date
+          schema:
+            items:
+              $ref: '#/definitions/dto.CreateMealLogRequestDTO'
+            type: array
+        "400":
+          description: Invalid date format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get meal logs by date
+      tags:
+      - meal_log
+  /nutrients/:
+    get:
+      description: Retrieve all nutrient records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of nutrients
+          schema:
+            items:
+              $ref: '#/definitions/models.Nutrient'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all nutrients
+      tags:
+      - nutrient
+    post:
+      consumes:
+      - application/json
+      description: Create a new nutrient record
+      parameters:
+      - description: Nutrient data
+        in: body
+        name: nutrient
+        required: true
+        schema:
+          $ref: '#/definitions/models.Nutrient'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Nutrient created successfully
+          schema:
+            $ref: '#/definitions/models.Nutrient'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create nutrient
+      tags:
+      - nutrient
+  /nutrients/{id}:
+    delete:
+      description: Delete a nutrient record by ID
+      parameters:
+      - description: Nutrient ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Nutrient deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete nutrient
+      tags:
+      - nutrient
+    get:
+      description: Retrieve a specific nutrient record by its ID
+      parameters:
+      - description: Nutrient ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Nutrient retrieved successfully
+          schema:
+            $ref: '#/definitions/models.Nutrient'
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Nutrient not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a nutrient by ID
+      tags:
+      - nutrient
+    put:
+      consumes:
+      - application/json
+      description: Update an existing nutrient record by ID
+      parameters:
+      - description: Nutrient ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated nutrient data
+        in: body
+        name: nutrient
+        required: true
+        schema:
+          $ref: '#/definitions/models.Nutrient'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Nutrient updated successfully
+          schema:
+            $ref: '#/definitions/models.Nutrient'
+        "400":
+          description: Invalid ID or request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update nutrient
+      tags:
+      - nutrient
+  /nutrients/category/{category}:
+    get:
+      description: Retrieve all nutrients belonging to a specific category
+      parameters:
+      - description: Nutrient category
+        in: path
+        name: category
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of nutrients in the category
+          schema:
+            items:
+              $ref: '#/definitions/models.Nutrient'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get nutrients by category
+      tags:
+      - nutrient
+  /nutrition/date/{date}:
+    get:
+      description: Calculate and retrieve the authenticated user's total nutrition
+        intake for a specific date
+      parameters:
+      - description: Date in YYYY-MM-DD format
+        in: path
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Nutrition summary for the date
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid date format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user nutrition by date
+      tags:
+      - nutrient
+  /nutrition/meal/{mealLogId}:
+    get:
+      description: Calculate and retrieve the nutrition breakdown for a specific meal
+        log (ownership required)
+      parameters:
+      - description: Meal log ID
+        in: path
+        name: mealLogId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Nutrition summary for the meal
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid meal log ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get nutrition for a specific meal log
+      tags:
+      - nutrient
+  /nutrition/range:
+    get:
+      description: Calculate and retrieve the authenticated user's total nutrition
+        intake within a date range
+      parameters:
+      - description: Start date in YYYY-MM-DD format
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End date in YYYY-MM-DD format
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Nutrition summary for the date range
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid date format or missing parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user nutrition by date range
+      tags:
+      - nutrient
+  /nutrition/today:
+    get:
+      description: Calculate and retrieve the authenticated user's total nutrition
+        intake for today
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Today's nutrition summary
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get today's nutrition for authenticated user
+      tags:
+      - nutrient
+  /profile:
+    get:
+      description: Retrieve the full profile of the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      description: Partially update the authenticated user's profile. Only fields
+        present in the request body are modified.
+      parameters:
+      - description: Profile fields to update
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserUpdateProfileRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Email already in use
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - user
+  /refresh:
+    post:
+      description: Read the refresh_token cookie, validate it, and issue a new token
+        pair
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token refreshed successfully
+          schema:
+            $ref: '#/definitions/dto.LoginResponseDTO'
+        "401":
+          description: Refresh token not found or invalid
+          schema:
+            $ref: '#/definitions/dto.LoginResponseDTO'
+      summary: Refresh access token
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account. Does not auto-login — call POST /login
+        after registration.
+      parameters:
+      - description: Registration data
+        in: body
+        name: credential
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User registered successfully
+          schema:
+            $ref: '#/definitions/dto.LoginResponseDTO'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/dto.LoginResponseDTO'
+        "409":
+          description: Email already in use
+          schema:
+            $ref: '#/definitions/dto.LoginResponseDTO'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.LoginResponseDTO'
+      summary: Register new user
+      tags:
+      - auth
+  /user-biometrics/:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user biometric record
+      parameters:
+      - description: User biometric data
+        in: body
+        name: biometric
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserBiometric'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User biometric created successfully
+          schema:
+            $ref: '#/definitions/models.UserBiometric'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create user biometric
+      tags:
+      - user_biometric
+  /user-biometrics/{id}:
+    delete:
+      description: Remove a user biometric record by ID
+      parameters:
+      - description: Biometric record ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User biometric deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user biometric
+      tags:
+      - user_biometric
+    get:
+      description: Retrieve a user biometric record by its ID
+      parameters:
+      - description: Biometric record ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User biometric retrieved successfully
+          schema:
+            $ref: '#/definitions/models.UserBiometric'
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User biometric not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user biometric by ID
+      tags:
+      - user_biometric
+    put:
+      consumes:
+      - application/json
+      description: Update an existing user biometric record by ID
+      parameters:
+      - description: Biometric record ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated biometric data
+        in: body
+        name: biometric
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserBiometric'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User biometric updated successfully
+          schema:
+            $ref: '#/definitions/models.UserBiometric'
+        "400":
+          description: Invalid ID or request body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user biometric
+      tags:
+      - user_biometric
+  /user-biometrics/types:
+    get:
+      description: Retrieve the full list of biometric types supported by the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of supported biometric types
+          schema:
+            items:
+              type: string
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get all supported biometric types
+      tags:
+      - user_biometric
+  /user-biometrics/user/{userId}:
+    get:
+      description: Retrieve all biometric records for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user biometrics
+          schema:
+            items:
+              $ref: '#/definitions/models.UserBiometric'
+            type: array
+        "400":
+          description: Invalid user ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all biometrics for a user
+      tags:
+      - user_biometric
+  /user-biometrics/user/{userId}/advanced-metrics:
+    get:
+      description: Calculate and retrieve advanced health metrics (BMI, body fat,
+        waist-hip ratio, health risk) for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Advanced health metrics
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get advanced health metrics for a user
+      tags:
+      - user_biometric
+  /user-biometrics/user/{userId}/chart/{type}:
+    get:
+      description: Retrieve biometric data formatted for chart visualization over
+        a date range
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Biometric type
+        in: path
+        name: type
+        required: true
+        type: string
+      - description: 'Start date in YYYY-MM-DD format (default: 30 days ago)'
+        in: query
+        name: startDate
+        type: string
+      - description: 'End date in YYYY-MM-DD format (default: today)'
+        in: query
+        name: endDate
+        type: string
+      - description: 'Maximum number of data points to return (default: 50)'
+        in: query
+        name: maxPoints
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Chart data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get biometric chart data
+      tags:
+      - user_biometric
+  /user-biometrics/user/{userId}/progress/{type}:
+    get:
+      description: Retrieve progress data for a specific biometric type over a date
+        range (defaults to last 30 days)
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Biometric type
+        in: path
+        name: type
+        required: true
+        type: string
+      - description: 'Start date in YYYY-MM-DD format (default: 30 days ago)'
+        in: query
+        name: startDate
+        type: string
+      - description: 'End date in YYYY-MM-DD format (default: today)'
+        in: query
+        name: endDate
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Biometric progress data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get biometric progress
+      tags:
+      - user_biometric
+  /user-biometrics/user/{userId}/summary:
+    get:
+      description: Retrieve a comprehensive summary of all biometric data for a specific
+        user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Biometric summary
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get biometric summary for a user
+      tags:
+      - user_biometric
+  /user-biometrics/user/{userId}/type/{type}:
+    get:
+      description: Retrieve biometric records of a specific type for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Biometric type (e.g. weight, height, bmi)
+        in: path
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user biometrics by type
+          schema:
+            items:
+              $ref: '#/definitions/models.UserBiometric'
+            type: array
+        "400":
+          description: Invalid user ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get biometrics by user and type
+      tags:
+      - user_biometric
+  /user-biometrics/user/{userId}/type/{type}/date-range:
+    get:
+      description: Retrieve biometric records of a specific type for a user within
+        a date range
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Biometric type
+        in: path
+        name: type
+        required: true
+        type: string
+      - description: Start date in YYYY-MM-DD format
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End date in YYYY-MM-DD format
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user biometrics in date range
+          schema:
+            items:
+              $ref: '#/definitions/models.UserBiometric'
+            type: array
+        "400":
+          description: Invalid parameters or date format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get biometrics by user, type and date range
+      tags:
+      - user_biometric
+  /user-biometrics/user/{userId}/type/{type}/latest:
+    get:
+      description: Retrieve the most recent biometric record of a specific type for
+        a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Biometric type
+        in: path
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Latest biometric record
+          schema:
+            $ref: '#/definitions/models.UserBiometric'
+        "400":
+          description: Invalid user ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Latest user biometric not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get latest biometric by user and type
+      tags:
+      - user_biometric
+  /user-biometrics/user/{userId}/types:
+    get:
+      description: Retrieve all biometric types that have recorded data for a specific
+        user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Available biometric types
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get available biometric types for a user
+      tags:
+      - user_biometric
+  /user/password/update:
+    post:
+      consumes:
+      - application/json
+      description: Update the current authenticated user's password by verifying the
+        current password first
+      parameters:
+      - description: Current and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdatePasswordRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password updated successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized or current password incorrect
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update password
+      tags:
+      - user
 swagger: "2.0"

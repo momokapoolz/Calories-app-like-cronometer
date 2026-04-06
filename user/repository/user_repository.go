@@ -55,6 +55,11 @@ func (r *UserRepository) Update(user *models.User) error {
 	return database.DB.Save(user).Error
 }
 
+// UpdatePassword updates only the password column for a given user ID
+func (r *UserRepository) UpdatePassword(userID uint, hashedPassword string) error {
+	return database.DB.Model(&models.User{}).Where("id = ?", userID).Update("password", hashedPassword).Error
+}
+
 // Delete removes a user from the database
 func (r *UserRepository) Delete(id uint) error {
 	return database.DB.Delete(&models.User{}, id).Error

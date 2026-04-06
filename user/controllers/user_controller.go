@@ -7,11 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/momokapoolz/caloriesapp/auth"
 	"github.com/momokapoolz/caloriesapp/dto"
+	"github.com/momokapoolz/caloriesapp/helpers"
 	"github.com/momokapoolz/caloriesapp/user/models"
 	"github.com/momokapoolz/caloriesapp/user/repository"
 )
 
-// UserController handles user profile endpoints
 type UserController struct {
 	userRepo *repository.UserRepository
 }
@@ -53,6 +53,16 @@ func (c *UserController) toUserResponse(user *models.User) dto.UserResponseDTO {
 	}
 }
 
+// GetProfile godoc
+// @Summary      Get user profile
+// @Description  Retrieve the full profile of the authenticated user
+// @Tags         user
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}  "User profile retrieved successfully"
+// @Failure      401  {object}  map[string]string       "Unauthorized"
+// @Failure      404  {object}  map[string]string       "User not found"
+// @Security     BearerAuth
+// @Router       /profile [get]
 // GetProfile retrieves the authenticated user's full profile
 func (c *UserController) GetProfile(ctx *gin.Context) {
 	userID, err := c.validateUserFromContext(ctx)
@@ -79,6 +89,21 @@ func (c *UserController) GetProfile(ctx *gin.Context) {
 	})
 }
 
+// UpdateProfile godoc
+// @Summary      Update user profile
+// @Description  Partially update the authenticated user's profile. Only fields present in the request body are modified.
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        profile  body      dto.UserUpdateProfileRequestDTO  true  "Profile fields to update"
+// @Success      200  {object}  map[string]interface{}  "Profile updated successfully"
+// @Failure      400  {object}  map[string]string       "Invalid request format"
+// @Failure      401  {object}  map[string]string       "Unauthorized"
+// @Failure      404  {object}  map[string]string       "User not found"
+// @Failure      409  {object}  map[string]string       "Email already in use"
+// @Failure      500  {object}  map[string]string       "Internal server error"
+// @Security     BearerAuth
+// @Router       /profile [put]
 // UpdateProfile allows an authenticated user to partially update their profile.
 // Only fields present in the request body are modified.
 func (c *UserController) UpdateProfile(ctx *gin.Context) {
@@ -148,6 +173,7 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 	}
 
 	if err := c.userRepo.Update(user); err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to update profile",
@@ -163,6 +189,17 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 	})
 }
 
+// DeleteAccount godoc
+// @Summary      Delete user account
+// @Description  Permanently remove the authenticated user's account
+// @Tags         user
+// @Produce      json
+// @Success      200  {object}  map[string]string  "Account deleted successfully"
+// @Failure      401  {object}  map[string]string  "Unauthorized"
+// @Failure      404  {object}  map[string]string  "User not found"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /account [delete]
 // DeleteAccount permanently removes the authenticated user's account
 func (c *UserController) DeleteAccount(ctx *gin.Context) {
 	userID, err := c.validateUserFromContext(ctx)
@@ -184,6 +221,7 @@ func (c *UserController) DeleteAccount(ctx *gin.Context) {
 	}
 
 	if err := c.userRepo.Delete(user.ID); err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to delete account",
@@ -206,6 +244,7 @@ func (c *UserController) RegisterRoutes(router gin.IRouter, authMiddleware *auth
 	{
 		protected.GET("/profile", c.GetProfile)
 		protected.PUT("/profile", c.UpdateProfile)
+		protected.PATCH("/profile", c.UpdateProfile)
 		protected.DELETE("/account", c.DeleteAccount)
 	}
 }

@@ -1,0 +1,1 @@
+ALTER TABLE nutrient DROP COLUMN unit;

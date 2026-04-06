@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/momokapoolz/caloriesapp/auth"
 	"github.com/momokapoolz/caloriesapp/dto"
+	"github.com/momokapoolz/caloriesapp/helpers"
 	"github.com/momokapoolz/caloriesapp/user/services"
 )
 
@@ -13,12 +14,26 @@ type PasswordController struct {
 	passwordService *services.PasswordService
 }
 
+// NewPasswordController creates a new password controller instance
 func NewPasswordController(passwordService *services.PasswordService) *PasswordController {
 	return &PasswordController{
 		passwordService: passwordService,
 	}
 }
 
+// UpdatePassword godoc
+// @Summary      Update password
+// @Description  Update the current authenticated user's password by verifying the current password first
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.UpdatePasswordRequestDTO  true  "Current and new password"
+// @Success      200  {object}  map[string]string  "Password updated successfully"
+// @Failure      400  {object}  map[string]string  "Invalid request format"
+// @Failure      401  {object}  map[string]string  "Unauthorized or current password incorrect"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /user/password/update [post]
 // UpdatePassword handles password update requests from users
 func (c *PasswordController) UpdatePassword(ctx *gin.Context) {
 	// Get current user from context (set by auth middleware)
@@ -53,6 +68,7 @@ func (c *PasswordController) UpdatePassword(ctx *gin.Context) {
 	// Update the password
 	err := c.passwordService.UpdatePassword(userClaims.Email, req.NewPassword)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to update password",
@@ -67,6 +83,18 @@ func (c *PasswordController) UpdatePassword(ctx *gin.Context) {
 	})
 }
 
+// AdminUpdatePassword godoc
+// @Summary      Admin update user password
+// @Description  Allow an administrator to update any user's password by email
+// @Tags         user
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.AdminUpdatePasswordRequestDTO  true  "Target email and new password"
+// @Success      200  {object}  map[string]string  "Password updated successfully"
+// @Failure      400  {object}  map[string]string  "Invalid request format"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Security     BearerAuth
+// @Router       /admin/user/password/update [post]
 // AdminUpdatePassword allows administrators to update any user's password
 func (c *PasswordController) AdminUpdatePassword(ctx *gin.Context) {
 	var req dto.AdminUpdatePasswordRequestDTO
@@ -82,6 +110,7 @@ func (c *PasswordController) AdminUpdatePassword(ctx *gin.Context) {
 	// Update the password
 	err := c.passwordService.UpdatePassword(req.Email, req.NewPassword)
 	if err != nil {
+		helpers.LogError(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to update password",
