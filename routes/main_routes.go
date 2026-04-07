@@ -18,15 +18,18 @@ func SetupRoutes(db *gorm.DB) *gin.Engine {
 	router := gin.Default()
 	router.Use(auth.CORSMiddleware())
 
-	// Health check endpoint
-	router.GET("/health", func(c *gin.Context) {
+	healthHandler := func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"status": "healthy",
+			"status":  "healthy",
 			"service": "calories-app",
 		})
-	})
+	}
+	
+	router.GET("/health", healthHandler)
 
 	v1 := router.Group("/api/v1")
+
+	v1.GET("/health", healthHandler)
 
 	routes.SetupFoodRoutes(v1, db)
 	nutrient_routes.SetupNutrientRoutes(v1, db)
